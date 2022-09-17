@@ -1,0 +1,5 @@
+== TODO ==
+
+camera com mouse centralizado []
+skybox [] (prioridade baixa)
+sol []
