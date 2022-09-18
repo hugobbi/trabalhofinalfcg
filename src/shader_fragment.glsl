@@ -13,6 +13,9 @@ in vec4 position_model;
 // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
 in vec2 texcoords;
 
+// Cor HUD
+in vec4 cor_interpolada_pelo_rasterizador;
+
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
@@ -22,6 +25,7 @@ uniform mat4 projection;
 #define SPHERE 0
 #define PLANAR 1
 #define PLANE 2
+#define HUD 3
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -31,7 +35,6 @@ uniform vec4 bbox_max;
 // Variáveis para acesso das imagens de textura
 uniform sampler2D TextureImage0;
 uniform sampler2D TextureImage1;
-uniform sampler2D TextureImage2;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -101,6 +104,8 @@ void main()
         U = texcoords.x;
         V = texcoords.y;
     }
+    else if (object_id == HUD)
+        color = cor_interpolada_pelo_rasterizador;
 
     vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
 

@@ -1,5 +1,7 @@
 == TODO ==
 
-camera com mouse centralizado []
+camera com mouse centralizado [x]
+arrumar problema da mira nao quadrada []
+camera em funcao []
 skybox [] (prioridade baixa)
 sol []

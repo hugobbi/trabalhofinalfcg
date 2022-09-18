@@ -75,6 +75,7 @@ void PopMatrix(glm::mat4& M);
 
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
+GLuint BuildTrianglesHUD(GLuint object);
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
 void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
@@ -263,15 +264,25 @@ int main(int argc, char* argv[])
     // CONSTROI OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
+    // Objetos
+    #define EARTH 0
+    #define PLANAR 1
+    #define PLANE 2
+    #define AIM 3
+
+    GLuint object_hud;
+
     // Modelo Terra
     ObjModel spheremodel("../../data/sphere_uv_shading.obj");
     ComputeNormals(&spheremodel);
     BuildTrianglesAndAddToVirtualScene(&spheremodel);
 
     // Modelo mira
-    ObjModel aimodel("../../data/aim.obj");
-    ComputeNormals(&aimodel);
-    BuildTrianglesAndAddToVirtualScene(&aimodel);
+    //ObjModel aim("../../data/aim.obj");
+    //ComputeNormals(&aim);
+    //BuildTrianglesAndAddToVirtualScene(&aim);
+    object_hud = AIM;
+    GLuint vertex_array_object_mira = BuildTrianglesHUD(object_hud);
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -386,9 +397,6 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define EARTH 0
-        #define AIM 2
-
         // Desenhamos o modelo da esfera
         model = Matrix_Translate(0.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
@@ -399,14 +407,20 @@ int main(int argc, char* argv[])
         DrawVirtualObject("sphere");
 
         // HUD
-        //glDisable(GL_DEPTH_TEST);
-        //model = Matrix_Identity();
-        //view = Matrix_Identity();
-        //projection = Matrix_Identity();
-        //glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
-        //glUniform1i(object_id_uniform, EARTH);
-        //DrawVirtualObject("aim");
-        //glEnable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glDepthFunc(GL_ALWAYS);
+        model = Matrix_Identity();
+        view = Matrix_Identity();
+        projection = Matrix_Identity();
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniform1i(object_id_uniform, AIM);
+        glBindVertexArray(vertex_array_object_mira);
+        glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS);
+        glEnable(GL_CULL_FACE);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -548,7 +562,6 @@ void LoadShadersFromFiles()
     glUseProgram(program_id);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage0"), 0);
     glUniform1i(glGetUniformLocation(program_id, "TextureImage1"), 1);
-    glUniform1i(glGetUniformLocation(program_id, "TextureImage2"), 2);
     glUseProgram(0);
 }
 
@@ -633,6 +646,73 @@ void ComputeNormals(ObjModel* model)
         model->attrib.normals[3*i + 1] = n.y;
         model->attrib.normals[3*i + 2] = n.z;
     }
+}
+
+GLuint BuildTrianglesHUD(GLuint object)
+{    
+    GLfloat x_aim_size = 0.01f;
+    GLfloat y_aim_size = x_aim_size*g_ScreenRatio;    
+    GLfloat NDC_coefficients_mira[] = {
+        -x_aim_size,  -y_aim_size, 0.0f, 1.0f,
+        -x_aim_size,   y_aim_size, 0.0f, 1.0f,
+         x_aim_size,  -y_aim_size, 0.0f, 1.0f,
+         x_aim_size,   y_aim_size, 0.0f, 1.0f
+    };
+
+    GLuint VBO_NDC_coefficients_id;
+    glGenBuffers(1, &VBO_NDC_coefficients_id);
+
+    GLuint vertex_array_object_id;
+    glGenVertexArrays(1, &vertex_array_object_id);
+    glBindVertexArray(vertex_array_object_id);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_NDC_coefficients_id);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(NDC_coefficients_mira), NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(NDC_coefficients_mira), NDC_coefficients_mira);
+
+    GLuint location = 0; // "(location = 0)" em "shader_vertex.glsl"
+    GLint  number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
+    glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(location);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    GLfloat color_coefficients_mira[] = {
+    //  R     G     B     A
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, 1.0f
+    };
+
+    GLuint VBO_color_coefficients_id;
+    glGenBuffers(1, &VBO_color_coefficients_id);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_color_coefficients_id);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(color_coefficients_mira), NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(color_coefficients_mira), color_coefficients_mira);
+
+    location = 1; // "(location = 1)" em "shader_vertex.glsl"
+    number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
+    glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(location);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    GLubyte indices[] = {0,1,2,3};
+
+    GLuint indices_id;
+    glGenBuffers(1, &indices_id);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices_id);
+
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(indices), indices);
+
+    glBindVertexArray(0);
+
+    // Retornamos o ID do VAO. Isso é tudo que será necessário para renderizar
+    // os triângulos definidos acima. Veja a chamada glDrawElements() em main().
+    return vertex_array_object_id;
 }
 
 // Constrói triângulos para futura renderização a partir de um ObjModel.
