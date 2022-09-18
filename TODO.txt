@@ -1,7 +1,19 @@
 == TODO ==
 
-camera com mouse centralizado [x]
-arrumar problema da mira nao quadrada []
-camera em funcao []
-skybox [] (prioridade baixa)
-sol []
+# ALTA PRIORIDADE
+- modelo asteroides []
+- movimento asteroides []
+    - bezier []
+- colisoes
+    - jogador <-> terra []
+    - jogador <-> asteroides []
+    - asteroides <-> asteroides []
+    - asteroides <-> terra []
+ 
+# MÉDIA PRIORIDADE
+- perninhas do personagem -> para ter transformações encadeadas []
+- camera lookat
+- blinn phong
+
+# BAIXA PRIORIDADE
+- melhorar skybox -> distorcao por causa de projeção esferica

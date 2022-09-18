@@ -26,6 +26,7 @@ uniform mat4 projection;
 #define PLANAR 1
 #define PLANE 2
 #define HUD 3
+#define CUBEMAP 4
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -33,8 +34,16 @@ uniform vec4 bbox_min;
 uniform vec4 bbox_max;
 
 // Variáveis para acesso das imagens de textura
-uniform sampler2D TextureImage0;
-uniform sampler2D TextureImage1;
+uniform sampler2D earth_day;
+uniform sampler2D earth_night;
+uniform sampler2D earth_clouds;
+
+uniform sampler2D right;
+//uniform sampler2D left;
+//uniform sampler2D top;
+//uniform sampler2D bottom;
+//uniform sampler2D front;
+//uniform sampler2D back;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -92,9 +101,6 @@ void main()
         float miny = bbox_min.y;
         float maxy = bbox_max.y;
 
-        float minz = bbox_min.z;
-        float maxz = bbox_max.z;
-
         U = (position_model.x - minx) / (maxx - minx);
         V = (position_model.y - miny) / (maxy - miny);
     }
@@ -103,21 +109,55 @@ void main()
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;
         V = texcoords.y;
-    } 
+    }
     
     if (object_id == HUD)
-        color = vec4(1.0, 1.0, 1.0, 1.0); //color = cor_interpolada_pelo_rasterizador;
+    {
+        color = vec4(1.0, 1.0, 1.0, 1.0); 
+    }
+    else if (object_id == CUBEMAP)
+    {
+        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
+        
+        vec4 p_prime = bbox_center + (position_model - bbox_center) / length(position_model - bbox_center);
+        vec4 p_vec = p_prime - bbox_center;
+
+        float theta = atan(p_vec.x, p_vec.z);
+        float phi = asin(p_vec.y);
+
+        U = (theta + M_PI) / (2*M_PI);
+        V = (phi + M_PI_2) / M_PI;
+
+        vec2 skyspherecoords = vec2(U, V);
+
+        /*if (normal == vec4(-1, 0, 0, 0))
+            color = texture(right, skyspherecoords);
+        else if (normal == vec4(1, 0, 0, 0))
+            color = texture(left, skyspherecoords);
+        else if (normal == vec4(0, -1, 0, 0))
+            color = texture(top, skyspherecoords);
+        else if (normal == vec4(0, 1, 0, 0))
+            color = texture(bottom, skyspherecoords);
+        else if (normal == vec4(0, 0, -1, 0))
+            color = texture(front, skyspherecoords);
+        else if (normal == vec4(0, 0, 1, 0))
+            color = texture(back, skyspherecoords);*/
+
+        color = texture(right, skyspherecoords);
+    }
     else
     {
-        vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
+        vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb;
         
         // Equação de Iluminação
         float lambert = max(0,dot(n,l));
         float intensity_night_lights = 100.0;
 
         if (lambert == 0)
-            Kd0 += intensity_night_lights*texture(TextureImage1, vec2(U,V)).rgb;
+            Kd0 += intensity_night_lights*texture(earth_night, vec2(U,V)).rgb;
 
+        float instensity_clouds = 5.0;
+        Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
         color.rgb = Kd0 * (lambert + 0.01);
 
         color.a = 1;

@@ -183,7 +183,7 @@ GLint bbox_max_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
-
+  
 int main(int argc, char* argv[])
 {
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 
     // Criamos uma janela do sistema operacional
     GLFWwindow* window;
-    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "INF01047 - Samuel, o Destruidor de Asteróides", NULL, NULL);
+    window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "INF01047 - Samuel, o Destruidor de Asteroides", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -257,8 +257,16 @@ int main(int argc, char* argv[])
 
     // CARREGAR TEXTURAS
     // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/tc-earth_daymap_surface.jpg");      // TextureImage0
-    LoadTextureImage("../../data/tc-earth_nightmap_citylights.gif"); // TextureImage1
+    LoadTextureImage("../../data/earth/tc-earth_daymap_surface.jpg");      // earth_day
+    LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
+    LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
+
+    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // right 
+    //LoadTextureImage("../../data/skybox/left.png"); // left
+    //LoadTextureImage("../../data/skybox/top.png"); // top
+    //LoadTextureImage("../../data/skybox/bottom.png"); // bottom
+    //LoadTextureImage("../../data/skybox/front.png"); // front
+    //LoadTextureImage("../../data/skybox/back.png"); // back
 
     // CONSTROI OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
@@ -268,17 +276,23 @@ int main(int argc, char* argv[])
     #define PLANAR 1
     #define PLANE 2
     #define AIM 3
+    #define CUBEMAP 4
 
     GLuint object_hud;
 
     // Modelo Terra
-    ObjModel spheremodel("../../data/sphere_uv_shading.obj");
+    ObjModel spheremodel("../../data/3d_models/sphere_uv_shading.obj");
     ComputeNormals(&spheremodel);
     BuildTrianglesAndAddToVirtualScene(&spheremodel);
 
     // Modelo mira
     object_hud = AIM;
     GLuint vertex_array_object_mira = BuildTrianglesHUD(object_hud);
+
+    // Modelo cubemap
+    ObjModel cubemapmodel("../../data/3d_models/cubemap.obj");
+    ComputeNormals(&cubemapmodel);
+    BuildTrianglesAndAddToVirtualScene(&cubemapmodel);
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -379,6 +393,18 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
 
+        // Desenhando cubemap
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        
+        model = Matrix_Translate(player_position.x, player_position.y, player_position.z);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, CUBEMAP);
+        DrawVirtualObject("cubemap");
+
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
+
         // Desenhamos o modelo da Terra
         model = Matrix_Translate(0.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
@@ -388,18 +414,9 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, EARTH);
         DrawVirtualObject("sphere");
 
-        // Desenhamos o modelo do Sol
-        float distance_sun = 2.5f;
-        float size_sun = 0.05f;
-        model = Matrix_Translate(distance_sun, distance_sun, distance_sun)
-              * Matrix_Scale(size_sun, size_sun, size_sun);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, AIM); // Sol é branco
-        DrawVirtualObject("sphere");
-
         // HUD
         glDisable(GL_CULL_FACE);
-        glDepthFunc(GL_ALWAYS);
+        glDisable(GL_DEPTH_TEST);
 
         glViewport( 0.0f, 0.0f, g_width, g_height);
         model = Matrix_Identity();
@@ -415,8 +432,8 @@ int main(int argc, char* argv[])
         glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
         glBindVertexArray(0);
 
-        glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST);
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -442,7 +459,7 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
-}
+} 
 
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
@@ -472,7 +489,7 @@ void LoadTextureImage(const char* filename)
 
     // Veja slides 95-96 do documento Aula_20_Mapeamento_de_Texturas.pdf
     glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
 
     // Parâmetros de amostragem da textura.
     glSamplerParameteri(sampler_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -556,8 +573,17 @@ void LoadShadersFromFiles()
 
     // Variáveis em "shader_fragment.glsl" para acesso das imagens de textura
     glUseProgram(program_id);
-    glUniform1i(glGetUniformLocation(program_id, "TextureImage0"), 0);
-    glUniform1i(glGetUniformLocation(program_id, "TextureImage1"), 1);
+    glUniform1i(glGetUniformLocation(program_id, "earth_day"), 0);
+    glUniform1i(glGetUniformLocation(program_id, "earth_night"), 1);
+    glUniform1i(glGetUniformLocation(program_id, "earth_clouds"), 2);
+    
+    glUniform1i(glGetUniformLocation(program_id, "right"), 3);
+    //glUniform1i(glGetUniformLocation(program_id, "left"), 4);
+    //glUniform1i(glGetUniformLocation(program_id, "top"), 5);
+    //glUniform1i(glGetUniformLocation(program_id, "bottom"), 6);
+    //glUniform1i(glGetUniformLocation(program_id, "front"), 7);
+    //glUniform1i(glGetUniformLocation(program_id, "back"), 8);
+
     glUseProgram(0);
 }
 
