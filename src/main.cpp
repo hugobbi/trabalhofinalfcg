@@ -149,11 +149,10 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // Variáveis da CÂMERA
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
-float g_CameraDistance = 3.5f; // Distância da câmera para a origem
 
-float deltaT = 0.0f;
-float last_frame = 0.0f;
-int dir_movement = -1;
+float g_deltaT = 0.0f;
+float g_last_frame = 0.0f;
+int g_dir_movement = -1;
 
 bool w_press = false;
 bool a_press = false;
@@ -278,9 +277,6 @@ int main(int argc, char* argv[])
     BuildTrianglesAndAddToVirtualScene(&spheremodel);
 
     // Modelo mira
-    //ObjModel aim("../../data/aim.obj");
-    //ComputeNormals(&aim);
-    //BuildTrianglesAndAddToVirtualScene(&aim);
     object_hud = AIM;
     GLuint vertex_array_object_mira = BuildTrianglesHUD(object_hud);
 
@@ -337,88 +333,88 @@ int main(int argc, char* argv[])
         v = v / norm(v);
 
         float current_frame = glfwGetTime();
-        deltaT = current_frame - last_frame;
-        last_frame = current_frame;
+        g_deltaT = current_frame - g_last_frame;
+        g_last_frame = current_frame;
 
         float speed = 1;
-        switch (dir_movement)
-            {
+        switch (g_dir_movement)
+        {
             case 0:
                 if (w_press)
-                    player_position += -w * speed * deltaT; // W
+                    player_position += -w * speed * g_deltaT; // W
                 break;
             case 1:
                 if (a_press)
-                    player_position += -u * speed * deltaT; // A
+                    player_position += -u * speed * g_deltaT; // A
                 break;
             case 2:
                 if (s_press)
-                    player_position += +w * speed * deltaT; // S
+                    player_position += +w * speed * g_deltaT; // S
                 break;
             case 3:
                 if (d_press)
-                    player_position += +u * speed * deltaT; // D
+                    player_position += +u * speed * g_deltaT; // D
                 break;
             case 4:
                 if (shift_press)
-                    player_position += +v * speed * deltaT; // SHIFT
+                    player_position += +v * speed * g_deltaT; // SHIFT
                 break;
             case 5:
                 if (ctrl_press)
-                    player_position += -v * speed * deltaT; // CTRL
+                    player_position += -v * speed * g_deltaT; // CTRL
                 break;
-                
             default:
                 break;
-            }
-        
-        // Computamos a matriz "View" utilizando os parâmetros da câmera para
-        // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
+        }
+
+        glm::mat4 model = Matrix_Identity();
         glm::mat4 view = Matrix_Camera_View(player_position, player_view, player_up);
 
         // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
-
-        // Note que, no sistema de coordenadas da câmera, os planos near e far
-        // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
         float nearplane = -0.1f;  // Posição do "near plane"
         float farplane  = -10.0f; // Posição do "far plane"
-
-        // Projeção Perspectiva.
-        // Para definição do field of view (FOV), veja slides 205-215 do documento Aula_09_Projecoes.pdf.
         float field_of_view = M_PI / 3.0f; 
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
+        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
-
-        // Enviamos as matrizes "view" e "projection" para a placa de vídeo
-        // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
-        // efetivamente aplicadas em todos os pontos.
-        glUniformMatrix4fv(view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
-        glUniformMatrix4fv(projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
-
-        // Desenhamos o modelo da esfera
+        // Desenhamos o modelo da Terra
         model = Matrix_Translate(0.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y((float)glfwGetTime() * 0.01f);
-        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, EARTH);
+        DrawVirtualObject("sphere");
+
+        // Desenhamos o modelo do Sol
+        float distance_sun = 2.5f;
+        float size_sun = 0.05f;
+        model = Matrix_Translate(distance_sun, distance_sun, distance_sun)
+              * Matrix_Scale(size_sun, size_sun, size_sun);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, AIM); // Sol é branco
         DrawVirtualObject("sphere");
 
         // HUD
         glDisable(GL_CULL_FACE);
         glDepthFunc(GL_ALWAYS);
+
+        glViewport( 0.0f, 0.0f, g_width, g_height);
         model = Matrix_Identity();
-        view = Matrix_Identity();
         projection = Matrix_Identity();
+        view = Matrix_Identity();
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+        //projection = Matrix_Orthographic(0, g_width, 0, g_height, 0, 1);
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+        
         glUniform1i(object_id_uniform, AIM);
         glBindVertexArray(vertex_array_object_mira);
         glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
         glBindVertexArray(0);
+
         glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
 
@@ -649,14 +645,23 @@ void ComputeNormals(ObjModel* model)
 }
 
 GLuint BuildTrianglesHUD(GLuint object)
-{    
-    GLfloat x_aim_size = 0.01f;
-    GLfloat y_aim_size = x_aim_size*g_ScreenRatio;    
+{
+    GLfloat x_aim_ndc_1, y_aim_ndc_1, x_aim_ndc_2, y_aim_ndc_2, aim_size_px = 11;
+    
+    if (object == AIM)
+    {
+        x_aim_ndc_1 = 2/g_width * ((g_width/2) - (aim_size_px/2)) - 1;  
+        x_aim_ndc_2 = 2/g_width * ((g_width/2) + (aim_size_px/2)) - 1;
+
+        y_aim_ndc_1 = 2/g_height * ((g_height/2) - (aim_size_px/2)) - 1;
+        y_aim_ndc_2 = 2/g_height * ((g_height/2) + (aim_size_px/2)) - 1;
+    }
+    
     GLfloat NDC_coefficients_mira[] = {
-        -x_aim_size,  -y_aim_size, 0.0f, 1.0f,
-        -x_aim_size,   y_aim_size, 0.0f, 1.0f,
-         x_aim_size,  -y_aim_size, 0.0f, 1.0f,
-         x_aim_size,   y_aim_size, 0.0f, 1.0f
+        x_aim_ndc_1,  y_aim_ndc_1, 0.0f, 1.0f,
+        x_aim_ndc_1,  y_aim_ndc_2, 0.0f, 1.0f,
+        x_aim_ndc_2,  y_aim_ndc_1, 0.0f, 1.0f,
+        x_aim_ndc_2,  y_aim_ndc_2, 0.0f, 1.0f
     };
 
     GLuint VBO_NDC_coefficients_id;
@@ -1082,18 +1087,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    // Atualizamos a distância da câmera para a origem utilizando a
-    // movimentação da "rodinha", simulando um ZOOM.
-    g_CameraDistance -= 0.1f*yoffset;
-
-    // Uma câmera look-at nunca pode estar exatamente "em cima" do ponto para
-    // onde ela está olhando, pois isto gera problemas de divisão por zero na
-    // definição do sistema de coordenadas da câmera. Isto é, a variável abaixo
-    // nunca pode ser zero. Versões anteriores deste código possuíam este bug,
-    // o qual foi detectado pelo aluno Vinicius Fraga (2017/2).
-    const float verysmallnumber = std::numeric_limits<float>::epsilon();
-    if (g_CameraDistance < verysmallnumber)
-        g_CameraDistance = verysmallnumber;
+    
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
@@ -1106,7 +1100,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_W)
     {
-        dir_movement = 0;
+        g_dir_movement = 0;
         if (action == GLFW_PRESS)
             w_press = true;
         else if (action == GLFW_RELEASE)
@@ -1115,7 +1109,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_A)
     {
-        dir_movement = 1;
+        g_dir_movement = 1;
         if (action == GLFW_PRESS)
             a_press = true;
         else if (action == GLFW_RELEASE)
@@ -1124,7 +1118,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_S)
     {
-        dir_movement = 2;
+        g_dir_movement = 2;
         if (action == GLFW_PRESS)
             s_press = true;
         else if (action == GLFW_RELEASE)
@@ -1133,7 +1127,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_D)
     {
-        dir_movement = 3;
+        g_dir_movement = 3;
         if (action == GLFW_PRESS)
             d_press = true;
         else if (action == GLFW_RELEASE)
@@ -1142,7 +1136,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_LEFT_SHIFT)
     {
-        dir_movement = 4;
+        g_dir_movement = 4;
         if (action == GLFW_PRESS)
             shift_press = true;
         else if (action == GLFW_RELEASE)
@@ -1151,7 +1145,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 
     if (key == GLFW_KEY_LEFT_CONTROL)
     {
-        dir_movement = 5;
+        g_dir_movement = 5;
         if (action == GLFW_PRESS)
             ctrl_press = true;
         else if (action == GLFW_RELEASE)
