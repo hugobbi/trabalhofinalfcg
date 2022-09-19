@@ -22,11 +22,12 @@ uniform mat4 view;
 uniform mat4 projection;
 
 // Identificador que define qual objeto está sendo desenhado no momento
-#define SPHERE 0
+#define EARTH 0
 #define PLANAR 1
 #define PLANE 2
 #define HUD 3
 #define CUBEMAP 4
+#define ASTEROID 5
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -44,6 +45,8 @@ uniform sampler2D right;
 //uniform sampler2D bottom;
 //uniform sampler2D front;
 //uniform sampler2D back;
+
+uniform sampler2D asteroid;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -80,7 +83,7 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-    if ( object_id == SPHERE )
+    if ( object_id == EARTH || object_id == ASTEROID)
     {
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
         
@@ -128,8 +131,6 @@ void main()
         U = (theta + M_PI) / (2*M_PI);
         V = (phi + M_PI_2) / M_PI;
 
-        vec2 skyspherecoords = vec2(U, V);
-
         /*if (normal == vec4(-1, 0, 0, 0))
             color = texture(right, skyspherecoords);
         else if (normal == vec4(1, 0, 0, 0))
@@ -143,24 +144,39 @@ void main()
         else if (normal == vec4(0, 0, 1, 0))
             color = texture(back, skyspherecoords);*/
 
-        color = texture(right, skyspherecoords);
+        color = texture(right, vec2(U, V));
     }
     else
     {
-        vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb;
-        
-        // Equação de Iluminação
-        float lambert = max(0,dot(n,l));
-        float intensity_night_lights = 100.0;
+        vec3 Kd0;
+        float lambert;
+        if (object_id == EARTH)
+        {
+            vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb;
+            
+            // Equação de Iluminação
+            float lambert = max(0,dot(n,l));
+            float intensity_night_lights = 100.0;
 
-        if (lambert == 0)
-            Kd0 += intensity_night_lights*texture(earth_night, vec2(U,V)).rgb;
+            if (lambert == 0)
+                Kd0 += intensity_night_lights*texture(earth_night, vec2(U,V)).rgb;
 
-        float instensity_clouds = 5.0;
-        Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
-        color.rgb = Kd0 * (lambert + 0.01);
+            float instensity_clouds = 5.0;
+            Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
 
-        color.a = 1;
+            color.rgb = Kd0 * (lambert + 0.01);
+            color.a = 1;
+        }
+        else if (object_id == ASTEROID)
+        {
+            vec3 Kd0 = texture(asteroid, vec2(U,V)).rgb;
+
+            // Equação de Iluminação
+            float lambert = max(0,dot(n,l));
+
+            color.rgb = Kd0 * (lambert + 0.01);
+            color.a = 1;
+        }
     }
 
     color.rgb = pow(color.rgb, vec3(1.0,1.0,1.0)/2.2);

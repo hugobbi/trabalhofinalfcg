@@ -103,6 +103,7 @@ void TextRendering_PrintMatrixVectorProductDivW(GLFWwindow* window, glm::mat4 M,
 // outras informações do programa. Definidas após main().
 void TextRendering_ShowModelViewProjection(GLFWwindow* window, glm::mat4 projection, glm::mat4 view, glm::mat4 model, glm::vec4 p_model);
 void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
+void TextRendering_ShowGameVersion(GLFWwindow* window, std::string version);
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
@@ -268,6 +269,8 @@ int main(int argc, char* argv[])
     //LoadTextureImage("../../data/skybox/front.png"); // front
     //LoadTextureImage("../../data/skybox/back.png"); // back
 
+    LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
+
     // CONSTROI OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
@@ -277,6 +280,7 @@ int main(int argc, char* argv[])
     #define PLANE 2
     #define AIM 3
     #define CUBEMAP 4
+    #define ASTEROID 5
 
     GLuint object_hud;
 
@@ -294,6 +298,11 @@ int main(int argc, char* argv[])
     ComputeNormals(&cubemapmodel);
     BuildTrianglesAndAddToVirtualScene(&cubemapmodel);
 
+    // Modelo asteroide
+    ObjModel asteroidmodel("../../data/3d_models/asteroid.obj");
+    ComputeNormals(&asteroidmodel);
+    BuildTrianglesAndAddToVirtualScene(&asteroidmodel);
+
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
 
@@ -307,7 +316,6 @@ int main(int argc, char* argv[])
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(window, SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
-
     // Ficamos em loop, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
     {
@@ -414,7 +422,16 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, EARTH);
         DrawVirtualObject("sphere");
 
-        // HUD
+        // Asteroide
+        model = Matrix_Translate(1.0f,1.0f,0.0f)
+              * Matrix_Rotate_Z((float)glfwGetTime() * 0.5f)
+              * Matrix_Rotate_X((float)glfwGetTime() * 0.4f)
+              * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, ASTEROID);
+        DrawVirtualObject("asteroid");
+
+        // HUD (SEMPRE POR ÚLTIMO)
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
 
@@ -438,6 +455,10 @@ int main(int argc, char* argv[])
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
+
+        // Mostra versão do jogo
+        std::string version = "Versao Pre-Alpha";
+        TextRendering_ShowGameVersion(window, version);
 
         // O framebuffer onde OpenGL executa as operações de renderização não
         // é o mesmo que está sendo mostrado para o usuário, caso contrário
@@ -577,12 +598,15 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(program_id, "earth_night"), 1);
     glUniform1i(glGetUniformLocation(program_id, "earth_clouds"), 2);
     
-    glUniform1i(glGetUniformLocation(program_id, "right"), 3);
+    glUniform1i(glGetUniformLocation(program_id, "right"), 3); // skybox
+
     //glUniform1i(glGetUniformLocation(program_id, "left"), 4);
     //glUniform1i(glGetUniformLocation(program_id, "top"), 5);
     //glUniform1i(glGetUniformLocation(program_id, "bottom"), 6);
     //glUniform1i(glGetUniformLocation(program_id, "front"), 7);
     //glUniform1i(glGetUniformLocation(program_id, "back"), 8);
+
+    glUniform1i(glGetUniformLocation(program_id, "asteroid"), 4); // asteroid
 
     glUseProgram(0);
 }
@@ -1464,4 +1488,13 @@ void PrintObjModelInfo(ObjModel* model)
     }
     printf("\n");
   }
+}
+
+void TextRendering_ShowGameVersion(GLFWwindow* window, std::string version)
+{
+    float lineheight = TextRendering_LineHeight(window);
+    float charwidth = TextRendering_CharWidth(window);
+    static int numchars = version.size();
+
+    TextRendering_PrintString(window, version, 1.0f-(numchars + 1)*charwidth, -1.0f+lineheight, 1.0f);
 }
