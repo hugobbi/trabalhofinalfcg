@@ -38,6 +38,7 @@
 // Headers locais, definidos na pasta "include/"
 #include "utils.h"
 #include "matrices.h"
+#include "collisions.h"
 
 #define SCREEN_WIDTH 1920
 #define SCREEN_HEIGHT 1080
@@ -186,7 +187,7 @@ GLint bbox_max_uniform;
 GLuint g_NumLoadedTextures = 0;
   
 int main(int argc, char* argv[])
-{
+{   
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
     int success = glfwInit();
@@ -269,7 +270,7 @@ int main(int argc, char* argv[])
     //LoadTextureImage("../../data/skybox/front.png"); // front
     //LoadTextureImage("../../data/skybox/back.png"); // back
 
-    LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
+    LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture 
 
     // CONSTROI OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos

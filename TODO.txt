@@ -1,19 +1,21 @@
 == TODO ==
 
 # ALTA PRIORIDADE
-- modelo asteroides []
+- modelo asteroides [x]
 - movimento asteroides []
-    - bezier []
+    - bezier [] -> asteroide radioativo (cow.obj)
 - colisoes
-    - jogador <-> terra []
-    - jogador <-> asteroides []
-    - asteroides <-> asteroides []
-    - asteroides <-> terra []
+    - jogador <-> terra [] (esfera-cubo)
+    - jogador <-> asteroides [] (esfera-cubo)
+    - asteroides <-> asteroides [] (cubo-cubo)
+    - asteroides <-> terra [] (cubo-cubo)
+    - arma <-> asteroides [] (ponto-esfera)
  
 # MÉDIA PRIORIDADE
 - perninhas do personagem -> para ter transformações encadeadas []
-- camera lookat
-- blinn phong
+- camera lookat [] -> ideia: buraco negro no meio do mapa com plaquinha com luz spotlight se entrar é sugado e fica ali preso (lookat)
+- blinn phong [] -> arma pra ela ficar brilhosinha ou buraco negro
+- gouraud [] -> ideia: alguma asteroide especial iluminado com blinn phong
 
 # BAIXA PRIORIDADE
-- melhorar skybox -> distorcao por causa de projeção esferica
+- melhorar skybox -> distorcao por causa de projeção esferica []
