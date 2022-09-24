@@ -42,8 +42,8 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 480
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -268,7 +268,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
     LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
 
-    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
+    LoadTextureImage("../../data/skybox/2k_stars_milky_way.jpg"); // skybox
 
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
 

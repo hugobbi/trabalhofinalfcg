@@ -51,4 +51,15 @@ bool sphereSphereCollision(Sphere sphere1, Sphere sphere2)
     return distance_between_centers < (sphere1.radius + sphere2.radius);
 }
 
+bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2)
+{
+    return false;
+}
+
+// weapon aim and asteroid collision
+bool pointRectangleCollision2D(glm::vec4 point, Rectangle rectangle)
+{
+    return false;
+}
+
 
