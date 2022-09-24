@@ -7,6 +7,7 @@
 //                   Trabalho Final
 //
 
+#include <iostream>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -39,9 +40,10 @@
 #include "utils.h"
 #include "matrices.h"
 #include "collisions.h"
+#include "scene.h"
 
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -65,7 +67,7 @@ struct ObjModel
 
         if (!ret)
             throw std::runtime_error("Erro ao carregar modelo.");
-        
+
         printf("OK.\n");
     }
 };
@@ -115,6 +117,9 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
+void printAABB(glm::vec3 bbmax, glm::vec3 bbmin);
+glm::vec3 HWD_rectangle(glm::vec3 bbmax, glm::vec3 bbmin);
+
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -163,8 +168,8 @@ bool d_press = false;
 bool shift_press = false;
 bool ctrl_press = false;
 
-glm::vec4 player_position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
-glm::vec4 aim_position = glm::vec4(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 1.0f);      
+glm::vec4 player_position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+glm::vec4 aim_position = glm::vec4(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 1.0f);
 
 float g_width = SCREEN_WIDTH;
 float g_height = SCREEN_HEIGHT;
@@ -185,9 +190,9 @@ GLint bbox_max_uniform;
 
 // Número de texturas carregadas pela função LoadTextureImage()
 GLuint g_NumLoadedTextures = 0;
-  
+
 int main(int argc, char* argv[])
-{   
+{
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
     int success = glfwInit();
@@ -263,25 +268,12 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
     LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
 
-    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // right 
-    //LoadTextureImage("../../data/skybox/left.png"); // left
-    //LoadTextureImage("../../data/skybox/top.png"); // top
-    //LoadTextureImage("../../data/skybox/bottom.png"); // bottom
-    //LoadTextureImage("../../data/skybox/front.png"); // front
-    //LoadTextureImage("../../data/skybox/back.png"); // back
+    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
 
-    LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture 
+    LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
 
-    // CONSTROI OBJETOS
+    // CARREGANDO OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
-
-    // Objetos
-    #define EARTH 0
-    #define PLANAR 1
-    #define PLANE 2
-    #define AIM 3
-    #define CUBEMAP 4
-    #define ASTEROID 5
 
     GLuint object_hud;
 
@@ -303,6 +295,13 @@ int main(int argc, char* argv[])
     ObjModel asteroidmodel("../../data/3d_models/asteroid.obj");
     ComputeNormals(&asteroidmodel);
     BuildTrianglesAndAddToVirtualScene(&asteroidmodel);
+
+    // Modelo cubo de teste
+    ObjModel cubemodel("../../data/3d_models/cube_test.obj");
+    ComputeNormals(&cubemodel);
+    BuildTrianglesAndAddToVirtualScene(&cubemodel);
+
+    Scene cena; // Inicializa cena
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -397,15 +396,17 @@ int main(int argc, char* argv[])
         glm::mat4 projection;
         float nearplane = -0.1f;  // Posição do "near plane"
         float farplane  = -10.0f; // Posição do "far plane"
-        float field_of_view = M_PI / 3.0f; 
+        float field_of_view = M_PI / 3.0f;
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
 
+        // Desenhando cena
+
         // Desenhando cubemap
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
-        
+
         model = Matrix_Translate(player_position.x, player_position.y, player_position.z);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, CUBEMAP);
@@ -415,22 +416,44 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da Terra
+        Sphere earth;
+
+        earth.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        earth.radius = 1.15f; // contando com "atmosfera"
+        earth.obj_id = EARTH;
+        cena.earth = earth;
+
         model = Matrix_Translate(0.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y((float)glfwGetTime() * 0.01f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, EARTH);
+        glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
         // Asteroide
+        Rectangle asteroid;
+
+        asteroid.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+        asteroid.HWD = g_VirtualScene["asteroid"].bbox_max;
+        asteroid.obj_id = ASTEROID;
+        cena.asteroids.push_back(asteroid);
+
         model = Matrix_Translate(1.0f,1.0f,0.0f)
-              * Matrix_Rotate_Z((float)glfwGetTime() * 0.5f)
-              * Matrix_Rotate_X((float)glfwGetTime() * 0.4f)
-              * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f);
+              * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, ASTEROID);
+        glUniform1i(object_id_uniform, asteroid.obj_id);
         DrawVirtualObject("asteroid");
+
+        // Cubo teste
+        glDisable(GL_CULL_FACE);
+        model = Matrix_Translate(1.0f,1.0f,0.0f)
+              * Matrix_Scale(0.12f, 0.1f, 0.15f)
+              * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, TESTCUBE);
+        DrawVirtualObject("cube");
+        glEnable(GL_CULL_FACE);
 
         // HUD (SEMPRE POR ÚLTIMO)
         glDisable(GL_CULL_FACE);
@@ -441,10 +464,9 @@ int main(int argc, char* argv[])
         projection = Matrix_Identity();
         view = Matrix_Identity();
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        //projection = Matrix_Orthographic(0, g_width, 0, g_height, 0, 1);
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
-        
+
         glUniform1i(object_id_uniform, AIM);
         glBindVertexArray(vertex_array_object_mira);
         glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
@@ -452,6 +474,22 @@ int main(int argc, char* argv[])
 
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
+
+        // Testa colisões
+
+        Sphere player;
+        player.position = player_position;
+        player.radius = 0.05f;
+
+        if (rectangleSphereCollision(asteroid, player))
+            std::cout << "BATEEEU" << std::endl;
+        else
+            std::cout << "ta safe" << std::endl;
+
+        //if (sphereSphereCollision(player_position, 0.05f, earth_center, earth_radius+atmosphere_limit))
+        //    std::cout << "BATEU CARAI" << std::endl;
+        //else
+        //    std::cout << "NAO BATEU :)" << std::endl;
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -461,18 +499,7 @@ int main(int argc, char* argv[])
         std::string version = "Versao Pre-Alpha";
         TextRendering_ShowGameVersion(window, version);
 
-        // O framebuffer onde OpenGL executa as operações de renderização não
-        // é o mesmo que está sendo mostrado para o usuário, caso contrário
-        // seria possível ver artefatos conhecidos como "screen tearing". A
-        // chamada abaixo faz a troca dos buffers, mostrando para o usuário
-        // tudo que foi renderizado pelas funções acima.
-        // Veja o link: Veja o link: https://en.wikipedia.org/w/index.php?title=Multiple_buffering&oldid=793452829#Double_buffering_in_computer_graphics
         glfwSwapBuffers(window);
-
-        // Verificamos com o sistema operacional se houve alguma interação do
-        // usuário (teclado, mouse, ...). Caso positivo, as funções de callback
-        // definidas anteriormente usando glfwSet*Callback() serão chamadas
-        // pela biblioteca GLFW.
         glfwPollEvents();
     }
 
@@ -481,7 +508,25 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
-} 
+}
+
+glm::vec3 HWD_rectangle(glm::vec3 bbmax, glm::vec3 bbmin)
+{
+    return glm::vec3(bbmax.x-bbmin.x, bbmax.y-bbmin.y, bbmax.z-bbmin.z);
+}
+
+void printAABB(glm::vec3 bbmax, glm::vec3 bbmin)
+{
+    std::cout << "bbmax.x = " << bbmax.x << std::endl;
+    std::cout << "bbmax.y = " << bbmax.y << std::endl;
+    std::cout << "bbmax.z = " << bbmax.z << std::endl;
+
+    std::cout << std::endl;
+
+    std::cout << "bbmin.x = " << bbmin.x << std::endl;
+    std::cout << "bbmin.y = " << bbmin.y << std::endl;
+    std::cout << "bbmin.z = " << bbmin.z << std::endl;
+}
 
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
@@ -511,7 +556,7 @@ void LoadTextureImage(const char* filename)
 
     // Veja slides 95-96 do documento Aula_20_Mapeamento_de_Texturas.pdf
     glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); 
+    glSamplerParameteri(sampler_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     // Parâmetros de amostragem da textura.
     glSamplerParameteri(sampler_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -598,14 +643,8 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(program_id, "earth_day"), 0);
     glUniform1i(glGetUniformLocation(program_id, "earth_night"), 1);
     glUniform1i(glGetUniformLocation(program_id, "earth_clouds"), 2);
-    
-    glUniform1i(glGetUniformLocation(program_id, "right"), 3); // skybox
 
-    //glUniform1i(glGetUniformLocation(program_id, "left"), 4);
-    //glUniform1i(glGetUniformLocation(program_id, "top"), 5);
-    //glUniform1i(glGetUniformLocation(program_id, "bottom"), 6);
-    //glUniform1i(glGetUniformLocation(program_id, "front"), 7);
-    //glUniform1i(glGetUniformLocation(program_id, "back"), 8);
+    glUniform1i(glGetUniformLocation(program_id, "skybox"), 3); // skybox
 
     glUniform1i(glGetUniformLocation(program_id, "asteroid"), 4); // asteroid
 
@@ -698,16 +737,16 @@ void ComputeNormals(ObjModel* model)
 GLuint BuildTrianglesHUD(GLuint object)
 {
     GLfloat x_aim_ndc_1, y_aim_ndc_1, x_aim_ndc_2, y_aim_ndc_2, aim_size_px = 11;
-    
+
     if (object == AIM)
     {
-        x_aim_ndc_1 = 2/g_width * ((g_width/2) - (aim_size_px/2)) - 1;  
+        x_aim_ndc_1 = 2/g_width * ((g_width/2) - (aim_size_px/2)) - 1;
         x_aim_ndc_2 = 2/g_width * ((g_width/2) + (aim_size_px/2)) - 1;
 
         y_aim_ndc_1 = 2/g_height * ((g_height/2) - (aim_size_px/2)) - 1;
         y_aim_ndc_2 = 2/g_height * ((g_height/2) + (aim_size_px/2)) - 1;
     }
-    
+
     GLfloat NDC_coefficients_mira[] = {
         x_aim_ndc_1,  y_aim_ndc_1, 0.0f, 1.0f,
         x_aim_ndc_1,  y_aim_ndc_2, 0.0f, 1.0f,
@@ -1054,7 +1093,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
         fprintf(stderr, "%s", output.c_str());
     }
 
-    // Os "Shader Objects" podem ser marcados para deleção após serem linkados 
+    // Os "Shader Objects" podem ser marcados para deleção após serem linkados
     glDeleteShader(vertex_shader_id);
     glDeleteShader(fragment_shader_id);
 
@@ -1116,29 +1155,29 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     float sensitivity = 2.0f;
 	double x_rot_camera = sensitivity * (xpos - (g_width/2)) / g_width;
 	double y_rot_camera = sensitivity * (ypos - (g_height/2)) / g_height;
-    
+
     // Atualizamos parâmetros da câmera com os deslocamentos
     g_CameraTheta -= sensitivity*x_rot_camera;
     g_CameraPhi   += sensitivity*y_rot_camera;
-    
+
     // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
     float phimax = 3.141592f/2;
     float phimin = -phimax;
-    
+
     if (g_CameraPhi > phimax)
         g_CameraPhi = phimax;
-    
+
     if (g_CameraPhi < phimin)
         g_CameraPhi = phimin;
 
-    // Mantém cursor no centro da tela    
+    // Mantém cursor no centro da tela
     glfwSetCursorPos(window, (g_width/2), (g_height/2));
 }
 
 // Função callback chamada sempre que o usuário movimenta a "rodinha" do mouse.
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    
+
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
@@ -1311,7 +1350,7 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
     if ( ellapsed_seconds > 1.0f )
     {
         numchars = snprintf(buffer, 20, "%.2f fps", ellapsed_frames / ellapsed_seconds);
-    
+
         old_seconds = seconds;
         ellapsed_frames = 0;
     }

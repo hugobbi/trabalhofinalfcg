@@ -5,17 +5,20 @@
 - movimento asteroides []
     - bezier [] -> asteroide radioativo (cow.obj)
 - colisoes
-    - jogador <-> terra [] (esfera-cubo)
+    - jogador <-> terra [] (esfera-cubo) -> parede invisivel
     - jogador <-> asteroides [] (esfera-cubo)
-    - asteroides <-> asteroides [] (cubo-cubo)
-    - asteroides <-> terra [] (cubo-cubo)
+    - asteroides <-> asteroides [] (esfera-esfera)
+    - asteroides <-> terra [] (esfera-esfera)
     - arma <-> asteroides [] (ponto-esfera)
  
 # MÉDIA PRIORIDADE
 - perninhas do personagem -> para ter transformações encadeadas []
-- camera lookat [] -> ideia: buraco negro no meio do mapa com plaquinha com luz spotlight se entrar é sugado e fica ali preso (lookat)
+- camera lookat [] -> ideia: buraco negro no meio do mapa com plaquinha com luz spotlight se entrar é sugado e fica ali preso (lookat) -> OUTRA IDEIA MELHOR: QUANDO MORRE, CAMERA LOOKAT FICA CENTRADA NA TERRA
 - blinn phong [] -> arma pra ela ficar brilhosinha ou buraco negro
 - gouraud [] -> ideia: alguma asteroide especial iluminado com blinn phong
 
 # BAIXA PRIORIDADE
 - melhorar skybox -> distorcao por causa de projeção esferica []
+
+Anotações:
+- possivelmente mudar plano de near e far da camera

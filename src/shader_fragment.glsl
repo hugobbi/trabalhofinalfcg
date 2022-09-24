@@ -28,6 +28,7 @@ uniform mat4 projection;
 #define HUD 3
 #define CUBEMAP 4
 #define ASTEROID 5
+#define TESTCUBE 6
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -39,12 +40,7 @@ uniform sampler2D earth_day;
 uniform sampler2D earth_night;
 uniform sampler2D earth_clouds;
 
-uniform sampler2D right;
-//uniform sampler2D left;
-//uniform sampler2D top;
-//uniform sampler2D bottom;
-//uniform sampler2D front;
-//uniform sampler2D back;
+uniform sampler2D skybox;
 
 uniform sampler2D asteroid;
 
@@ -131,20 +127,7 @@ void main()
         U = (theta + M_PI) / (2*M_PI);
         V = (phi + M_PI_2) / M_PI;
 
-        /*if (normal == vec4(-1, 0, 0, 0))
-            color = texture(right, skyspherecoords);
-        else if (normal == vec4(1, 0, 0, 0))
-            color = texture(left, skyspherecoords);
-        else if (normal == vec4(0, -1, 0, 0))
-            color = texture(top, skyspherecoords);
-        else if (normal == vec4(0, 1, 0, 0))
-            color = texture(bottom, skyspherecoords);
-        else if (normal == vec4(0, 0, -1, 0))
-            color = texture(front, skyspherecoords);
-        else if (normal == vec4(0, 0, 1, 0))
-            color = texture(back, skyspherecoords);*/
-
-        color = texture(right, vec2(U, V));
+        color = texture(skybox, vec2(U, V));
     }
     else
     {
@@ -170,6 +153,16 @@ void main()
         else if (object_id == ASTEROID)
         {
             vec3 Kd0 = texture(asteroid, vec2(U,V)).rgb;
+
+            // Equação de Iluminação
+            float lambert = max(0,dot(n,l));
+
+            color.rgb = Kd0 * (lambert + 0.01);
+            color.a = 1;
+        }
+        else if (object_id == TESTCUBE)
+        {
+            vec3 Kd0 = vec3(1.0, 1.0, 1.0);
 
             // Equação de Iluminação
             float lambert = max(0,dot(n,l));
