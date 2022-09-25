@@ -29,6 +29,8 @@ uniform mat4 projection;
 #define CUBEMAP 4
 #define ASTEROID 5
 #define TESTCUBE 6
+#define PLAYER 7
+#define LASER 8
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -128,6 +130,10 @@ void main()
         V = (phi + M_PI_2) / M_PI;
 
         color = texture(skybox, vec2(U, V));
+    }
+    else if (object_id == LASER)
+    {
+        color = vec4(1.0, 0.0, 0.0, 1.0); // laser vermelho 
     }
     else
     {

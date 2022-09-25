@@ -53,12 +53,45 @@ bool sphereSphereCollision(Sphere sphere1, Sphere sphere2)
 
 bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2)
 {
+    float xDistance = fabs(rectangle1.position.x - rectangle2.position.x);
+    float yDistance = fabs(rectangle1.position.y - rectangle2.position.y);
+    float zDistance = fabs(rectangle1.position.z - rectangle2.position.z);
+
+    if (xDistance >= (rectangle1.HWD.x + rectangle2.HWD.x))
+        return false;
+    if (yDistance >= (rectangle1.HWD.y + rectangle2.HWD.y))
+        return false;
+    if (zDistance >= (rectangle1.HWD.z + rectangle2.HWD.z))
+        return false;
+
+    if (xDistance < rectangle1.HWD.x)
+        return true;
+    if (yDistance < rectangle1.HWD.y)
+        return true;
+    if (zDistance < rectangle1.HWD.z)
+        return true;
+    
     return false;
 }
 
-// weapon aim and asteroid collision
-bool pointRectangleCollision2D(glm::vec4 point, Rectangle rectangle)
+bool playerCollision(Player* player, Scene scene)
 {
+    // verifica colisão com asteroides
+    for (Rectangle asteroid : scene.asteroids)
+    {
+       if (rectangleRectangleCollision(asteroid, player->geometry))
+       {
+            player->state = false; // jogador morreu
+            return true;
+       }
+    }
+
+    // verifica colisão com Terra
+    if (rectangleSphereCollision(player->geometry, scene.earth))
+    {
+        return true;
+    }
+
     return false;
 }
 

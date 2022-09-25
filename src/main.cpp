@@ -42,8 +42,8 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 480
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -156,6 +156,7 @@ bool g_MiddleMouseButtonPressed = false; // Análogo para botão do meio do mous
 // Variáveis da CÂMERA
 float g_CameraTheta = 0.0f; // Ângulo no plano ZX em relação ao eixo Z
 float g_CameraPhi = 0.0f;   // Ângulo em relação ao eixo Y
+float g_CameraDistance = 2.5f;
 
 float g_deltaT = 0.0f;
 float g_last_frame = 0.0f;
@@ -168,7 +169,6 @@ bool d_press = false;
 bool shift_press = false;
 bool ctrl_press = false;
 
-glm::vec4 player_position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 glm::vec4 aim_position = glm::vec4(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 1.0f);
 
 float g_width = SCREEN_WIDTH;
@@ -268,7 +268,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
     LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
 
-    LoadTextureImage("../../data/skybox/2k_stars_milky_way.jpg"); // skybox
+    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
 
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
 
@@ -303,6 +303,22 @@ int main(int argc, char* argv[])
 
     Scene cena; // Inicializa cena
 
+    // Terra
+    Sphere earth;
+    earth.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    earth.radius = 1.15f; // contando com "atmosfera"
+    earth.obj_id = EARTH;
+    cena.earth = earth;
+    
+    // Player
+    Player player;
+    player.geometry.position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    player.geometry.HWD.x = 0.05f;
+    player.geometry.HWD.y = 0.05f;
+    player.geometry.HWD.z = 0.05f;
+    player.obj_id = PLAYER;
+    player.state = true; // jogador está vivo
+
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
 
@@ -316,90 +332,137 @@ int main(int argc, char* argv[])
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(window, SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
-    // Ficamos em loop, renderizando, até que o usuário feche a janela
+
     while (!glfwWindowShouldClose(window))
     {
-        // Aqui executamos as operações de renderização
-
-        // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
-        // definida como coeficientes RGBA: Red, Green, Blue, Alpha; isto é:
-        // Vermelho, Verde, Azul, Alpha (valor de transparência).
-        // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
-        //
-        //           R     G     B     A
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-        // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
-        // e também resetamos todos os pixels do Z-buffer (depth buffer).
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
-        // os shaders de vértice e fragmentos).
         glUseProgram(program_id);
 
-        // Rotação da câmera
-        float vx =  (float)cos(g_CameraPhi)*sin(g_CameraTheta);
-        float vy = -(float)sin(g_CameraPhi);
-        float vz =  (float)cos(g_CameraPhi)*cos(g_CameraTheta);
+        glm::vec4 world_up = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
 
-        glm::vec4 player_view = glm::vec4(vx, vy, vz, 0.0f);
-        glm::vec4 player_up   = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
-
-        // Controla movimento do jogador
-        glm::vec4 w = -player_view;
-        glm::vec4 u = crossproduct(player_up, w);
-        glm::vec4 v = crossproduct(w, u);
-
-        w = w / norm(w);
-        u = u / norm(u);
-        v = v / norm(v);
-
-        float current_frame = glfwGetTime();
-        g_deltaT = current_frame - g_last_frame;
-        g_last_frame = current_frame;
-
-        float speed = 1;
-        switch (g_dir_movement)
+        if (player.state)
         {
-            case 0:
-                if (w_press)
-                    player_position += -w * speed * g_deltaT; // W
-                break;
-            case 1:
-                if (a_press)
-                    player_position += -u * speed * g_deltaT; // A
-                break;
-            case 2:
-                if (s_press)
-                    player_position += +w * speed * g_deltaT; // S
-                break;
-            case 3:
-                if (d_press)
-                    player_position += +u * speed * g_deltaT; // D
-                break;
-            case 4:
-                if (shift_press)
-                    player_position += +v * speed * g_deltaT; // SHIFT
-                break;
-            case 5:
-                if (ctrl_press)
-                    player_position += -v * speed * g_deltaT; // CTRL
-                break;
-            default:
-                break;
+            // Verifica se jogador foi atingido, apenas se ele estiver vivo
+            for (Rectangle asteroid : cena.asteroids)
+                rectangleRectangleCollision(asteroid, player.geometry);
+            
+            // Câmera livre
+            float vx =  (float)cos(g_CameraPhi)*sin(g_CameraTheta);
+            float vy = -(float)sin(g_CameraPhi);
+            float vz =  (float)cos(g_CameraPhi)*cos(g_CameraTheta);
+
+            glm::vec4 player_view = glm::vec4(vx, vy, vz, 0.0f);
+        
+            // Controla movimento do jogador
+            glm::vec4 w = -player_view;
+            glm::vec4 u = crossproduct(world_up, w);
+            glm::vec4 v = crossproduct(w, u);
+
+            w = w / norm(w);
+            u = u / norm(u);
+            v = v / norm(v);
+
+            float current_frame = glfwGetTime();
+            g_deltaT = current_frame - g_last_frame;
+            g_last_frame = current_frame;
+
+            float speed = 1;
+            glm::vec4 oldPlayerPosition = player.geometry.position;
+            switch (g_dir_movement)
+            {
+                case 0:
+                    if (w_press)
+                    {
+                        player.geometry.position += -w * speed * g_deltaT; // W
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                case 1:
+                    if (a_press)
+                    {
+                        player.geometry.position += -u * speed * g_deltaT; // A
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                case 2:
+                    if (s_press)
+                    {
+                        player.geometry.position += +w * speed * g_deltaT; // S
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                case 3:
+                    if (d_press)
+                    {
+                        player.geometry.position += +u * speed * g_deltaT; // D
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                case 4:
+                    if (shift_press)
+                    {
+                        player.geometry.position += +v * speed * g_deltaT; // SHIFT
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                case 5:
+                    if (ctrl_press)
+                    {
+                        player.geometry.position += -v * speed * g_deltaT; // CTRL
+                        if (playerCollision(&player, cena))
+                        {
+                            player.geometry.position = oldPlayerPosition;
+                        }
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            glm::mat4 view = Matrix_Camera_View(player.geometry.position, player_view, world_up);
+            glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+        }
+        else // se o jogador morreu
+        {
+            // Camera Lookat
+            float r = g_CameraDistance;
+            float y = r*sin(g_CameraPhi);
+            float z = r*cos(g_CameraPhi)*cos(g_CameraTheta);
+            float x = r*cos(g_CameraPhi)*sin(g_CameraTheta);
+
+            glm::vec4 camera_position_c  = glm::vec4(x,y,z,1.0f); 
+            glm::vec4 camera_lookat_l    = glm::vec4(0.0f,0.0f,0.0f,1.0f); 
+            glm::vec4 camera_view_vector = camera_lookat_l - camera_position_c;
+            
+            glm::mat4 view = Matrix_Camera_View(camera_position_c, camera_view_vector, world_up);
+            glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         }
 
         glm::mat4 model = Matrix_Identity();
-        glm::mat4 view = Matrix_Camera_View(player_position, player_view, player_up);
-
-        // Agora computamos a matriz de Projeção.
         glm::mat4 projection;
         float nearplane = -0.1f;  // Posição do "near plane"
         float farplane  = -10.0f; // Posição do "far plane"
         float field_of_view = M_PI / 3.0f;
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
-        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
+
+        // Atualiza elementos do cenário
 
         // Desenhando cena
 
@@ -407,7 +470,10 @@ int main(int argc, char* argv[])
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
 
-        model = Matrix_Translate(player_position.x, player_position.y, player_position.z);
+        model = (player.state) ? Matrix_Translate(player.geometry.position.x, player.geometry.position.y, player.geometry.position.z)   
+                               :   Matrix_Translate(0.0f, 0.0f, 0.0f) // se o jogador morrer, o skybox será maior e centrado na origem
+                                 * Matrix_Scale(5.0f, 5.0f, 5.0f); 
+
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, CUBEMAP);
         DrawVirtualObject("cubemap");
@@ -416,13 +482,6 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da Terra
-        Sphere earth;
-
-        earth.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-        earth.radius = 1.15f; // contando com "atmosfera"
-        earth.obj_id = EARTH;
-        cena.earth = earth;
-
         model = Matrix_Translate(0.0f,0.0f,0.0f)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
@@ -431,73 +490,84 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
+        // VAO SER GERADOS:
         // Asteroide
         Rectangle asteroid;
-
         asteroid.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
         asteroid.HWD = g_VirtualScene["asteroid"].bbox_max;
         asteroid.obj_id = ASTEROID;
         cena.asteroids.push_back(asteroid);
 
+        Laser laser;
+        laser.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+        laser.radius = 0.025f;
+        laser.obj_id = LASER;
+        cena.lasers.push_back(laser);
+
+        // Desenhamos asteroide
         model = Matrix_Translate(1.0f,1.0f,0.0f)
               * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, asteroid.obj_id);
         DrawVirtualObject("asteroid");
 
+        // Desenhamos o modelo do Laser
+        model = Matrix_Translate(1.0f,1.5f,0.0f)
+              * Matrix_Scale(laser.radius, laser.radius, laser.radius);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, laser.obj_id);
+        DrawVirtualObject("sphere");
+
         // Cubo teste
-        glDisable(GL_CULL_FACE);
+        /*glDisable(GL_CULL_FACE);
         model = Matrix_Translate(1.0f,1.0f,0.0f)
               * Matrix_Scale(0.12f, 0.1f, 0.15f)
               * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, TESTCUBE);
         DrawVirtualObject("cube");
-        glEnable(GL_CULL_FACE);
+        glEnable(GL_CULL_FACE);*/
 
         // HUD (SEMPRE POR ÚLTIMO)
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
+        if (player.state) // só é mostrado se o jogador estiver vivo
+        {
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
 
-        glViewport( 0.0f, 0.0f, g_width, g_height);
-        model = Matrix_Identity();
-        projection = Matrix_Identity();
-        view = Matrix_Identity();
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
+            //glViewport( 0.0f, 0.0f, g_width, g_height);
+            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+            glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+            glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
+            glUniform1i(object_id_uniform, AIM);
+            glBindVertexArray(vertex_array_object_mira);
+            glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
+            glBindVertexArray(0);
 
-        glUniform1i(object_id_uniform, AIM);
-        glBindVertexArray(vertex_array_object_mira);
-        glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_BYTE, 0);
-        glBindVertexArray(0);
+            glEnable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
+        }
 
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_DEPTH_TEST);
-
-        // Testa colisões
-
-        Sphere player;
-        player.position = player_position;
-        player.radius = 0.05f;
-
-        if (rectangleSphereCollision(asteroid, player))
-            std::cout << "BATEEEU" << std::endl;
-        else
-            std::cout << "ta safe" << std::endl;
-
-        //if (sphereSphereCollision(player_position, 0.05f, earth_center, earth_radius+atmosphere_limit))
-        //    std::cout << "BATEU CARAI" << std::endl;
-        //else
-        //    std::cout << "NAO BATEU :)" << std::endl;
-
-        // Imprimimos na tela informação sobre o número de quadros renderizados
-        // por segundo (frames per second).
+        // Mostra fps
         TextRendering_ShowFramesPerSecond(window);
 
         // Mostra versão do jogo
         std::string version = "Versao Pre-Alpha";
         TextRendering_ShowGameVersion(window, version);
+
+        // Mensagem Game Over
+        if (!player.state)
+        {
+            float lineheight = TextRendering_LineHeight(window);
+            float charwidth = TextRendering_CharWidth(window);
+
+            std::string mensagemMorte = "E morreu :(";
+            static int numchars = mensagemMorte.size();
+            TextRendering_PrintString(window, mensagemMorte, -(numchars + 1)*charwidth, lineheight, 2.0f);
+
+            std::string mensagemESC = "Obrigado por jogar! (Pressione ESC para sair)";
+            numchars = mensagemESC.size();
+            TextRendering_PrintString(window, mensagemESC, -(numchars + 1)*charwidth, -2.5f*lineheight, 1.0f);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();

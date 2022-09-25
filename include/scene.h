@@ -13,6 +13,8 @@
 #define CUBEMAP 4
 #define ASTEROID 5
 #define TESTCUBE 6
+#define PLAYER 7
+#define LASER 8
 
 struct Sphere
 {
@@ -28,8 +30,26 @@ struct Rectangle
     int obj_id;
 };
 
+struct Player
+{
+    Rectangle geometry;
+    int obj_id;
+    int state;
+    int asteroids_destroyed;
+};
+
+struct Laser
+{
+    glm::vec4 position;
+    int obj_id;
+    float speed;
+    float radius;
+};
+
+
 struct Scene
 {
     std::vector<Rectangle> asteroids;
+    std::vector<Laser> lasers;
     Sphere earth;
 };
