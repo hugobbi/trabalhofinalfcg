@@ -87,12 +87,32 @@ bool playerCollision(Player* player, Scene scene)
     }
 
     // verifica colisão com Terra
-    if (rectangleSphereCollision(player->geometry, scene.earth))
+    if (rectangleSphereCollision(player->geometry, scene.earth->geometry))
     {
         return true;
     }
 
     return false;
+}
+
+int laserCollision(Scene* scene, Laser laser)
+{
+    for (auto asteroid = scene->asteroids.begin(); asteroid != scene->asteroids.end(); asteroid++)
+    {
+        if (rectangleSphereCollision(asteroid->geometry, laser.geometry))
+        {
+            asteroid->state = false;
+            scene->asteroids.erase(asteroid--);
+            return 1;
+        }
+    }
+    if (sphereSphereCollision(scene->earth->geometry, laser.geometry))
+    {
+        scene->earth->state = 2;
+        return 2;
+    }
+
+    return 0;
 }
 
 

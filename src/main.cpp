@@ -42,8 +42,10 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 480
+
+#define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -268,7 +270,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
     LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
 
-    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
+    LoadTextureImage("../../data/skybox/2k_stars_milky_way.jpg"); // skybox
 
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
 
@@ -304,11 +306,12 @@ int main(int argc, char* argv[])
     Scene cena; // Inicializa cena
 
     // Terra
-    Sphere earth;
-    earth.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    earth.radius = 1.15f; // contando com "atmosfera"
+    Earth earth;
+    earth.geometry.position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    earth.geometry.radius = 1.0f;
     earth.obj_id = EARTH;
-    cena.earth = earth;
+    earth.state = 1;
+    cena.earth = &earth;
     
     // Player
     Player player;
@@ -319,6 +322,14 @@ int main(int argc, char* argv[])
     player.obj_id = PLAYER;
     player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     player.state = true; // jogador está vivo
+
+    // Asteroide inicial teste
+    Asteroid asteroid;
+    asteroid.state = true;
+    asteroid.geometry.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+    asteroid.geometry.HWD = g_VirtualScene["asteroid"].bbox_max;
+    asteroid.obj_id = ASTEROID;
+    cena.asteroids.push_back(asteroid);
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -437,7 +448,6 @@ int main(int argc, char* argv[])
                 default:
                     break;
             }
-
             glm::mat4 view = Matrix_Camera_View(player.geometry.position, player_view, world_up);
             glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         }
@@ -465,8 +475,6 @@ int main(int argc, char* argv[])
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Atualiza elementos do cenário
-
         // Desenhando cena
 
         // Desenhando cubemap
@@ -493,17 +501,8 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
-        // VAO SER GERADOS:
-        // Asteroide e laser
-        Asteroid asteroid;
-        asteroid.state = true;
-        asteroid.geometry.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
-        asteroid.geometry.HWD = g_VirtualScene["asteroid"].bbox_max;
-        asteroid.obj_id = ASTEROID;
-        cena.asteroids.push_back(asteroid);
-
-        // Desenhamos asteroide
-        if (asteroid.state)
+        // Desenhamos asteroides
+        for (Asteroid asteroid : cena.asteroids)
         {
             model = Matrix_Translate(1.0f,1.0f,0.0f)
                 * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
@@ -515,24 +514,31 @@ int main(int argc, char* argv[])
         // cria lasers se o botão do mouse for pressionado
         if (g_LeftMouseButtonPressed && g_createLaser)
         {
-            createLaser(&cena, player);
+            createLaser(&cena, player, glfwGetTime());
             g_createLaser = false;
         }
         else if (!g_LeftMouseButtonPressed)
             g_createLaser = true;
 
-        std::cout << cena.lasers.size() << std::endl;
-
-        for (Laser laser : cena.lasers) // renderiza cada laser da cena
+        for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
         {
-            laser.position += laser.direction * laser.speed;
-            model = Matrix_Translate(laser.position.x, laser.position.y, laser.position.z)
-                * Matrix_Scale(laser.radius, laser.radius, laser.radius);
+            laser->geometry.position += laser->direction * laser->speed * (float)(glfwGetTime() - laser->animationTime);
+            model = Matrix_Translate(laser->geometry.position.x, laser->geometry.position.y, laser->geometry.position.z)
+                * Matrix_Scale(laser->geometry.radius, laser->geometry.radius, laser->geometry.radius);
             glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(object_id_uniform, laser.obj_id);
+            glUniform1i(object_id_uniform, laser->obj_id);
             DrawVirtualObject("sphere");
 
-            std::cout << " x= " << laser.position.x << " y= " << laser.position.y << " z= " << laser.position.z << std::endl;
+            int collisionTypeLaser = laserCollision(&cena, *laser); 
+            if (collisionTypeLaser == 2)
+                player.state = false;
+
+            float distanceOrigin = calculateDistanceBetweenPoints(ORIGIN, laser->geometry.position);
+            if (distanceOrigin > 12.0f) // remove lasers que saíram do mapa
+            {
+                laser->state = false;
+                cena.lasers.erase(laser--);
+            }
         }
 
         // Cubo teste
@@ -577,13 +583,21 @@ int main(int argc, char* argv[])
             float lineheight = TextRendering_LineHeight(window);
             float charwidth = TextRendering_CharWidth(window);
 
-            std::string mensagemMorte = "E morreu :(";
-            static int numchars = mensagemMorte.size();
-            TextRendering_PrintString(window, mensagemMorte, -(numchars + 1)*charwidth, lineheight, 2.0f);
+            std::string mensagemMorte;
 
+            if (earth.state == 2)
+            {
+                mensagemMorte = "Voce destruiu a Terra :/";
+            }
+            else
+                mensagemMorte = "E morreu :(";
+
+            int numchars = mensagemMorte.size();
+            TextRendering_PrintString(window, mensagemMorte, -(numchars+1)*charwidth, 0.0f, 2.0f);
+            
             std::string mensagemESC = "Obrigado por jogar! (Pressione ESC para sair)";
             numchars = mensagemESC.size();
-            TextRendering_PrintString(window, mensagemESC, -(numchars + 1)*charwidth, -2.5f*lineheight, 1.0f);
+            TextRendering_PrintString(window, mensagemESC, -(numchars-20)*charwidth, -1.2f*lineheight, 1.0f);
         }
 
         glfwSwapBuffers(window);

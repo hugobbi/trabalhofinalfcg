@@ -133,7 +133,7 @@ void main()
     }
     else if (object_id == LASER)
     {
-        color = vec4(1.0, 0.0, 0.0, 1.0); // laser vermelho 
+        color = vec4(1.0, 0.0, 0.0, 1.0); // laser 0.53, 0.97, 0.84
     }
     else
     {

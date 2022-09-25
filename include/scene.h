@@ -20,13 +20,18 @@ struct Sphere
 {
     glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     float radius;
-    int obj_id;
 };
 
 struct Rectangle
 {
     glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     glm::vec3 HWD = glm::vec3(0.0f, 0.0f, 0.0f); // Height Width Depth
+};
+
+struct Earth
+{
+    Sphere geometry;
+    int state;
     int obj_id;
 };
 
@@ -41,11 +46,11 @@ struct Player
 
 struct Laser
 {
-    glm::vec4 position;
+    Sphere geometry;
     glm::vec4 direction;
     int obj_id;
     float speed;
-    float radius;
+    float animationTime;
     bool state;
 };
 
@@ -61,7 +66,7 @@ struct Scene
 {
     std::vector<Asteroid> asteroids;
     std::vector<Laser> lasers;
-    Sphere earth;
+    Earth* earth;
 };
 
-void createLaser(Scene* scene, Player player);
+void createLaser(Scene* scene, Player player, float animationTime);
