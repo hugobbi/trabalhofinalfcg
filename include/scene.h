@@ -33,23 +33,35 @@ struct Rectangle
 struct Player
 {
     Rectangle geometry;
+    glm::vec4 direction;
     int obj_id;
-    int state;
+    bool state;
     int asteroids_destroyed;
 };
 
 struct Laser
 {
     glm::vec4 position;
+    glm::vec4 direction;
     int obj_id;
     float speed;
     float radius;
+    bool state;
 };
 
+struct Asteroid
+{
+    Rectangle geometry;
+    glm::vec4 direction;
+    int obj_id;
+    bool state;
+};
 
 struct Scene
 {
-    std::vector<Rectangle> asteroids;
+    std::vector<Asteroid> asteroids;
     std::vector<Laser> lasers;
     Sphere earth;
 };
+
+void createLaser(Scene* scene, Player player);

@@ -5,8 +5,8 @@
 - movimento asteroides []
     - bezier [] -> asteroide radioativo (cow.obj)
 - colisoes
-    - jogador <-> terra [] (esfera-cubo) -> parede invisivel
-    - jogador <-> asteroides [] (esfera-cubo)
+    - jogador <-> terra [x] (esfera-cubo) -> parede invisivel
+    - jogador <-> asteroides [x] (esfera-cubo)
     - asteroides <-> asteroides [] (esfera-esfera)
     - asteroides <-> terra [] (esfera-esfera)
     - arma <-> asteroides [] (ponto-esfera)
@@ -22,3 +22,8 @@
 
 Anotações:
 - possivelmente mudar plano de near e far da camera
+
+== Proximos passos ==
+- colisao laser com asteroide e com terra 
+- movimento laser (direcao da camera)
+- geracao laser (ao clicar mouse)

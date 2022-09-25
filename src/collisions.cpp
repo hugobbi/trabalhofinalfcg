@@ -77,9 +77,9 @@ bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2)
 bool playerCollision(Player* player, Scene scene)
 {
     // verifica colisão com asteroides
-    for (Rectangle asteroid : scene.asteroids)
+    for (Asteroid asteroid : scene.asteroids)
     {
-       if (rectangleRectangleCollision(asteroid, player->geometry))
+       if (rectangleRectangleCollision(asteroid.geometry, player->geometry))
        {
             player->state = false; // jogador morreu
             return true;

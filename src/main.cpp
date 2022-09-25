@@ -169,10 +169,10 @@ bool d_press = false;
 bool shift_press = false;
 bool ctrl_press = false;
 
-glm::vec4 aim_position = glm::vec4(SCREEN_WIDTH/2, SCREEN_HEIGHT/2, 0.0f, 1.0f);
-
 float g_width = SCREEN_WIDTH;
 float g_height = SCREEN_HEIGHT;
+
+bool g_createLaser = true;
 
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
@@ -317,6 +317,7 @@ int main(int argc, char* argv[])
     player.geometry.HWD.y = 0.05f;
     player.geometry.HWD.z = 0.05f;
     player.obj_id = PLAYER;
+    player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     player.state = true; // jogador está vivo
 
     // Inicializamos o código para renderização de texto.
@@ -341,11 +342,16 @@ int main(int argc, char* argv[])
 
         glm::vec4 world_up = glm::vec4(0.0f,1.0f,0.0f,0.0f); // Vetor "up" fixado para apontar para o "céu" (eito Y global)
 
+        // Regulam tempo de animações para diferentes CPUs
+        float current_frame = glfwGetTime();
+        g_deltaT = current_frame - g_last_frame;
+        g_last_frame = current_frame;
+
         if (player.state)
         {
             // Verifica se jogador foi atingido, apenas se ele estiver vivo
-            for (Rectangle asteroid : cena.asteroids)
-                rectangleRectangleCollision(asteroid, player.geometry);
+            for (Asteroid asteroid : cena.asteroids)
+                rectangleRectangleCollision(asteroid.geometry, player.geometry);
             
             // Câmera livre
             float vx =  (float)cos(g_CameraPhi)*sin(g_CameraTheta);
@@ -353,6 +359,7 @@ int main(int argc, char* argv[])
             float vz =  (float)cos(g_CameraPhi)*cos(g_CameraTheta);
 
             glm::vec4 player_view = glm::vec4(vx, vy, vz, 0.0f);
+            player.direction = player_view;
         
             // Controla movimento do jogador
             glm::vec4 w = -player_view;
@@ -362,10 +369,6 @@ int main(int argc, char* argv[])
             w = w / norm(w);
             u = u / norm(u);
             v = v / norm(v);
-
-            float current_frame = glfwGetTime();
-            g_deltaT = current_frame - g_last_frame;
-            g_last_frame = current_frame;
 
             float speed = 1;
             glm::vec4 oldPlayerPosition = player.geometry.position;
@@ -491,32 +494,46 @@ int main(int argc, char* argv[])
         DrawVirtualObject("sphere");
 
         // VAO SER GERADOS:
-        // Asteroide
-        Rectangle asteroid;
-        asteroid.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
-        asteroid.HWD = g_VirtualScene["asteroid"].bbox_max;
+        // Asteroide e laser
+        Asteroid asteroid;
+        asteroid.state = true;
+        asteroid.geometry.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
+        asteroid.geometry.HWD = g_VirtualScene["asteroid"].bbox_max;
         asteroid.obj_id = ASTEROID;
         cena.asteroids.push_back(asteroid);
 
-        Laser laser;
-        laser.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
-        laser.radius = 0.025f;
-        laser.obj_id = LASER;
-        cena.lasers.push_back(laser);
-
         // Desenhamos asteroide
-        model = Matrix_Translate(1.0f,1.0f,0.0f)
-              * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, asteroid.obj_id);
-        DrawVirtualObject("asteroid");
+        if (asteroid.state)
+        {
+            model = Matrix_Translate(1.0f,1.0f,0.0f)
+                * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
+            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(object_id_uniform, asteroid.obj_id);
+            DrawVirtualObject("asteroid");
+        }
 
-        // Desenhamos o modelo do Laser
-        model = Matrix_Translate(1.0f,1.5f,0.0f)
-              * Matrix_Scale(laser.radius, laser.radius, laser.radius);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, laser.obj_id);
-        DrawVirtualObject("sphere");
+        // cria lasers se o botão do mouse for pressionado
+        if (g_LeftMouseButtonPressed && g_createLaser)
+        {
+            createLaser(&cena, player);
+            g_createLaser = false;
+        }
+        else if (!g_LeftMouseButtonPressed)
+            g_createLaser = true;
+
+        std::cout << cena.lasers.size() << std::endl;
+
+        for (Laser laser : cena.lasers) // renderiza cada laser da cena
+        {
+            laser.position += laser.direction * laser.speed;
+            model = Matrix_Translate(laser.position.x, laser.position.y, laser.position.z)
+                * Matrix_Scale(laser.radius, laser.radius, laser.radius);
+            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(object_id_uniform, laser.obj_id);
+            DrawVirtualObject("sphere");
+
+            std::cout << " x= " << laser.position.x << " y= " << laser.position.y << " z= " << laser.position.z << std::endl;
+        }
 
         // Cubo teste
         /*glDisable(GL_CULL_FACE);
