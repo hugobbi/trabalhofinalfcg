@@ -2,7 +2,6 @@
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <vector>
 
 // object ids
@@ -15,6 +14,15 @@
 #define TESTCUBE 6
 #define PLAYER 7
 #define LASER 8
+
+#define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+
+#define ASTEROID_X_MIN -12
+#define ASTEROID_X_MAX 12
+#define ASTEROID_Y_MIN -12
+#define ASTEROID_Y_MAX 12
+
+#define ASTEROID_Z_MAX 10
 
 struct Sphere
 {
@@ -60,6 +68,8 @@ struct Asteroid
     glm::vec4 direction;
     int obj_id;
     bool state;
+    float speed;
+    float animationTime;
 };
 
 struct Scene
@@ -70,3 +80,4 @@ struct Scene
 };
 
 void createLaser(Scene* scene, Player player, float animationTime);
+void createAsteroid(Scene* scene, glm::vec4 position, float animationTime);

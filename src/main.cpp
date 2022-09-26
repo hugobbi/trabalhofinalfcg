@@ -42,10 +42,8 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 480
-
-#define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 680
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -175,6 +173,7 @@ float g_width = SCREEN_WIDTH;
 float g_height = SCREEN_HEIGHT;
 
 bool g_createLaser = true;
+float g_lastTime = 0.0f;
 
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
@@ -303,7 +302,8 @@ int main(int argc, char* argv[])
     ComputeNormals(&cubemodel);
     BuildTrianglesAndAddToVirtualScene(&cubemodel);
 
-    Scene cena; // Inicializa cena
+    // Inicializa cena
+    Scene cena; 
 
     // Terra
     Earth earth;
@@ -323,14 +323,6 @@ int main(int argc, char* argv[])
     player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     player.state = true; // jogador está vivo
 
-    // Asteroide inicial teste
-    Asteroid asteroid;
-    asteroid.state = true;
-    asteroid.geometry.position = glm::vec4(1.0f,1.0f,0.0f,1.0f);
-    asteroid.geometry.HWD = g_VirtualScene["asteroid"].bbox_max;
-    asteroid.obj_id = ASTEROID;
-    cena.asteroids.push_back(asteroid);
-
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
 
@@ -345,6 +337,8 @@ int main(int argc, char* argv[])
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(window, SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
 
+    srand(time(0)); // sets random seed
+    
     while (!glfwWindowShouldClose(window))
     {
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -484,7 +478,6 @@ int main(int argc, char* argv[])
         model = (player.state) ? Matrix_Translate(player.geometry.position.x, player.geometry.position.y, player.geometry.position.z)   
                                :   Matrix_Translate(0.0f, 0.0f, 0.0f) // se o jogador morrer, o skybox será maior e centrado na origem
                                  * Matrix_Scale(5.0f, 5.0f, 5.0f); 
-
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, CUBEMAP);
         DrawVirtualObject("cubemap");
@@ -501,20 +494,43 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
-        // Desenhamos asteroides
-        for (Asteroid asteroid : cena.asteroids)
+        // Atualiza asteroides
+        float currentTime = (float)glfwGetTime();
+        float deltaTime = currentTime - g_lastTime;
+
+        if (deltaTime >= 1.5)
         {
-            model = Matrix_Translate(1.0f,1.0f,0.0f)
-                * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
-            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(object_id_uniform, asteroid.obj_id);
-            DrawVirtualObject("asteroid");
+            float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
+            float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
+            glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
+            createAsteroid(&cena, position, (float)glfwGetTime());   
+            g_lastTime = currentTime;
         }
 
-        // cria lasers se o botão do mouse for pressionado
+        for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) // Desenha cada asteroide da cena
+        {
+            asteroid->geometry.position += glm::normalize(asteroid->direction) * asteroid->speed * (float)(glfwGetTime() - asteroid->animationTime);
+            model = Matrix_Translate(asteroid->geometry.position.x, asteroid->geometry.position.y, asteroid->geometry.position.z)
+                  * Matrix_Rotate_X((float)glfwGetTime() * 0.5f) // rotacao pode ter problema de colisao
+                  * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f)
+                  * Matrix_Rotate_Z((float)glfwGetTime() * 0.3f);
+            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(object_id_uniform, asteroid->obj_id);
+            DrawVirtualObject("asteroid");
+
+            if (rectangleSphereCollision(asteroid->geometry, earth.geometry))
+            {
+                asteroid->state = false;
+                cena.asteroids.erase(asteroid--);
+                player.state = false;
+                earth.state = 0;
+            }
+        }
+
+        // Cria lasers se o botão do mouse for pressionado
         if (g_LeftMouseButtonPressed && g_createLaser)
         {
-            createLaser(&cena, player, glfwGetTime());
+            createLaser(&cena, player, (float)glfwGetTime());
             g_createLaser = false;
         }
         else if (!g_LeftMouseButtonPressed)
@@ -522,9 +538,9 @@ int main(int argc, char* argv[])
 
         for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
         {
-            laser->geometry.position += laser->direction * laser->speed * (float)(glfwGetTime() - laser->animationTime);
+            laser->geometry.position += glm::normalize(laser->direction) * laser->speed * (float)(glfwGetTime() - laser->animationTime);
             model = Matrix_Translate(laser->geometry.position.x, laser->geometry.position.y, laser->geometry.position.z)
-                * Matrix_Scale(laser->geometry.radius, laser->geometry.radius, laser->geometry.radius);
+                  * Matrix_Scale(laser->geometry.radius, laser->geometry.radius, laser->geometry.radius);
             glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             glUniform1i(object_id_uniform, laser->obj_id);
             DrawVirtualObject("sphere");
@@ -588,6 +604,10 @@ int main(int argc, char* argv[])
             if (earth.state == 2)
             {
                 mensagemMorte = "Voce destruiu a Terra :/";
+            }
+            else if (earth.state == 0)
+            {
+                mensagemMorte = "A Terra foi destruida :(";
             }
             else
                 mensagemMorte = "E morreu :(";
