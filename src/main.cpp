@@ -42,8 +42,8 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 680
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/earth/tc-earth_nightmap_citylights.gif"); // earth_night
     LoadTextureImage("../../data/earth/2k_earth_clouds.jpg"); // earth_clouds
 
-    LoadTextureImage("../../data/skybox/2k_stars_milky_way.jpg"); // skybox
+    LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
 
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
 
@@ -463,8 +463,8 @@ int main(int argc, char* argv[])
 
         glm::mat4 model = Matrix_Identity();
         glm::mat4 projection;
-        float nearplane = -0.1f;  // Posição do "near plane"
-        float farplane  = -10.0f; // Posição do "far plane"
+        float nearplane = -0.01f;  // Posição do "near plane" -0.1
+        float farplane  = -20.0f; // Posição do "far plane" -10
         float field_of_view = M_PI / 3.0f;
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
@@ -475,8 +475,10 @@ int main(int argc, char* argv[])
         glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
 
-        model = (player.state) ? Matrix_Translate(player.geometry.position.x, player.geometry.position.y, player.geometry.position.z)   
-                               :   Matrix_Translate(0.0f, 0.0f, 0.0f) // se o jogador morrer, o skybox será maior e centrado na origem
+        model = (player.state) ?   Matrix_Translate(player.geometry.position.x, player.geometry.position.y, player.geometry.position.z)
+                                 * Matrix_Scale(10.0f, 10.0f, 10.0f)
+                               // se o jogador morrer, o skybox será maior e centrado na origem
+                               :   Matrix_Translate(0.0f, 0.0f, 0.0f) 
                                  * Matrix_Scale(5.0f, 5.0f, 5.0f); 
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, CUBEMAP);
@@ -498,7 +500,7 @@ int main(int argc, char* argv[])
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - g_lastTime;
 
-        if (deltaTime >= 1.5)
+        if (deltaTime >= 2)
         {
             float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
             float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
@@ -1273,7 +1275,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     // Deslocamento do mouse em relação ao centro da tela, normalizado
-    float sensitivity = 2.0f;
+    float sensitivity = 1.3f;
 	double x_rot_camera = sensitivity * (xpos - (g_width/2)) / g_width;
 	double y_rot_camera = sensitivity * (ypos - (g_height/2)) / g_height;
 

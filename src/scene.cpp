@@ -4,7 +4,7 @@
 #define LASER_RADIUS 0.025
 
 #define ASTEROID_HWD glm::vec3(0.12, 0.1, 0.15)
-#define ASTEROID_SPEED 0.0002
+#define ASTEROID_SPEED 0.0008
 
 void createLaser(Scene* scene, Player player, float animationTime)
 {

@@ -17,10 +17,10 @@
 
 #define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
 
-#define ASTEROID_X_MIN -12
-#define ASTEROID_X_MAX 12
-#define ASTEROID_Y_MIN -12
-#define ASTEROID_Y_MAX 12
+#define ASTEROID_X_MIN 0
+#define ASTEROID_X_MAX 10
+#define ASTEROID_Y_MIN 0
+#define ASTEROID_Y_MAX 10
 
 #define ASTEROID_Z_MAX 10
 
