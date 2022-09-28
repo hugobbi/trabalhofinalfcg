@@ -31,6 +31,7 @@ uniform mat4 projection;
 #define TESTCUBE 6
 #define PLAYER 7
 #define LASER 8
+#define COW 9
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -45,6 +46,7 @@ uniform sampler2D earth_clouds;
 uniform sampler2D skybox;
 
 uniform sampler2D asteroid;
+uniform sampler2D cow;
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -94,7 +96,7 @@ void main()
         U = (theta + M_PI) / (2*M_PI);
         V = (phi + M_PI_2) / M_PI;
     }
-    else if ( object_id == PLANAR )
+    else if (object_id == PLANAR || object_id == COW)
     {
         float minx = bbox_min.x;
         float maxx = bbox_max.x;
@@ -169,6 +171,16 @@ void main()
         else if (object_id == TESTCUBE)
         {
             vec3 Kd0 = vec3(1.0, 1.0, 1.0);
+
+            // Equação de Iluminação
+            float lambert = max(0,dot(n,l));
+
+            color.rgb = Kd0 * (lambert + 0.01);
+            color.a = 1;
+        }
+        else if (object_id == COW)
+        {
+            vec3 Kd0 = texture(cow, vec2(U,V)).rgb;
 
             // Equação de Iluminação
             float lambert = max(0,dot(n,l));

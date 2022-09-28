@@ -20,6 +20,8 @@ out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
 
+#define COW 0 // gouraud
+
 void main()
 {
     // A variável gl_Position define a posição final de cada vértice

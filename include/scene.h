@@ -14,6 +14,7 @@
 #define TESTCUBE 6
 #define PLAYER 7
 #define LASER 8
+#define COW 9
 
 #define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
 
@@ -23,6 +24,7 @@
 #define ASTEROID_Y_MAX 10
 
 #define ASTEROID_Z_MAX 10
+#define COW_Z_MAX 10
 
 struct Sphere
 {
@@ -72,12 +74,24 @@ struct Asteroid
     float animationTime;
 };
 
+struct Cow
+{
+    Rectangle geometry;
+    int obj_id;
+    bool state;
+    float speed;
+    float animationTime;
+    float bezierPoints[4];
+};
+
 struct Scene
 {
     std::vector<Asteroid> asteroids;
     std::vector<Laser> lasers;
+    std::vector<Cow> cows;
     Earth* earth;
 };
 
 void createLaser(Scene* scene, Player player, float animationTime);
 void createAsteroid(Scene* scene, glm::vec4 position, float animationTime);
+void createCow(Scene* scene, glm::vec4 position, float bezierPoints[4], glm::vec3 cowHWD, float animationTime);

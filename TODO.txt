@@ -3,7 +3,7 @@
 # ALTA PRIORIDADE
 - modelo asteroides [x]
 - movimento asteroides [x]
-    - bezier [] -> asteroide radioativo (cow.obj)
+    - bezier [] -> asteroide radioativo (cow.obj) [x]
 - colisoes [x]
     - jogador <-> terra [x] (esfera-cubo) -> parede invisivel
     - jogador <-> asteroides [x] (esfera-cubo)

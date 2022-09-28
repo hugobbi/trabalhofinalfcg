@@ -175,6 +175,8 @@ float g_height = SCREEN_HEIGHT;
 bool g_createLaser = true;
 float g_lastTime = 0.0f;
 
+bool g_once = true;
+
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
 
@@ -272,6 +274,7 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/skybox/8k_stars_milky_way.jpg"); // skybox
 
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
+    LoadTextureImage("../../data/cow/aguaviva.jpg"); // cow texture
 
     // CARREGANDO OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
@@ -301,6 +304,11 @@ int main(int argc, char* argv[])
     ObjModel cubemodel("../../data/3d_models/cube_test.obj");
     ComputeNormals(&cubemodel);
     BuildTrianglesAndAddToVirtualScene(&cubemodel);
+
+    // Modelo vaca
+    ObjModel cowmodel("../../data/3d_models/cow.obj");
+    ComputeNormals(&cowmodel);
+    BuildTrianglesAndAddToVirtualScene(&cowmodel);
 
     // Inicializa cena
     Scene cena; 
@@ -500,14 +508,14 @@ int main(int argc, char* argv[])
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - g_lastTime;
 
-        if (deltaTime >= 2)
+        /*if (deltaTime >= 2)
         {
             float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
             float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
             glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
             createAsteroid(&cena, position, (float)glfwGetTime());   
             g_lastTime = currentTime;
-        }
+        }*/
 
         for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) // Desenha cada asteroide da cena
         {
@@ -529,8 +537,40 @@ int main(int argc, char* argv[])
             }
         }
 
+        // Cria vacas que se movem em curva de Bézier
+        if (cena.asteroids.size() == 5 || cena.asteroids.size() > 15 || g_once) // g_once para testes, cria vaca uma vez
+        {
+            float bezierPoints[4] = {1, 1, 1, 1};
+            float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
+            float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
+            glm::vec4 position = glm::vec4(3, 3, 3, 1.0f); // x, y, COW_Z_MAX, 1.0f
+            createCow(&cena, position, bezierPoints, g_VirtualScene["cow"].bbox_max, (float)glfwGetTime());
+            g_once = false;
+        }
+
+        for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++)
+        {
+            model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z);
+            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform1i(object_id_uniform, cow->obj_id);
+            DrawVirtualObject("cow");
+
+            if (rectangleSphereCollision(cow->geometry, earth.geometry)) // se alguma vaca acertar a Terra
+            {
+                cow->state = false;
+                cena.cows.erase(cow--);
+                player.state = false;
+                earth.state = 0;
+            }
+
+            if (rectangleRectangleCollision(cow->geometry, player.geometry)) // se alguma vaca acertar o jogador
+            {
+                player.state = false;
+            }
+        }
+
         // Cria lasers se o botão do mouse for pressionado
-        if (g_LeftMouseButtonPressed && g_createLaser)
+        if (g_LeftMouseButtonPressed && g_createLaser && player.state)
         {
             createLaser(&cena, player, (float)glfwGetTime());
             g_createLaser = false;
@@ -552,7 +592,7 @@ int main(int argc, char* argv[])
                 player.state = false;
 
             float distanceOrigin = calculateDistanceBetweenPoints(ORIGIN, laser->geometry.position);
-            if (distanceOrigin > 12.0f) // remove lasers que saíram do mapa
+            if (distanceOrigin > 15.0f) // remove lasers que saíram do mapa
             {
                 laser->state = false;
                 cena.lasers.erase(laser--);
@@ -770,6 +810,7 @@ void LoadShadersFromFiles()
     glUniform1i(glGetUniformLocation(program_id, "skybox"), 3); // skybox
 
     glUniform1i(glGetUniformLocation(program_id, "asteroid"), 4); // asteroid
+    glUniform1i(glGetUniformLocation(program_id, "cow"), 5); // cow
 
     glUseProgram(0);
 }
@@ -1275,7 +1316,7 @@ void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
     // Deslocamento do mouse em relação ao centro da tela, normalizado
-    float sensitivity = 1.3f;
+    float sensitivity = 1.2f;
 	double x_rot_camera = sensitivity * (xpos - (g_width/2)) / g_width;
 	double y_rot_camera = sensitivity * (ypos - (g_height/2)) / g_height;
 

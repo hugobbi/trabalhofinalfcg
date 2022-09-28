@@ -106,6 +106,15 @@ int laserCollision(Scene* scene, Laser laser)
             return 1;
         }
     }
+    for (auto cow = scene->cows.begin(); cow != scene->cows.end(); cow++)
+    {
+        if (rectangleSphereCollision(cow->geometry, laser.geometry))
+        {
+            cow->state = false;
+            scene->cows.erase(cow--);
+            return 3;
+        }
+    }
     if (sphereSphereCollision(scene->earth->geometry, laser.geometry))
     {
         scene->earth->state = 2;
