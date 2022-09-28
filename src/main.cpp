@@ -508,14 +508,14 @@ int main(int argc, char* argv[])
         float currentTime = (float)glfwGetTime();
         float deltaTime = currentTime - g_lastTime;
 
-        /*if (deltaTime >= 2)
+        if (deltaTime >= 2 && cena.asteroids.size() < ASTEROID_MAX_NUM)
         {
             float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
             float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
             glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
             createAsteroid(&cena, position, (float)glfwGetTime());   
             g_lastTime = currentTime;
-        }*/
+        }
 
         for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) // Desenha cada asteroide da cena
         {
@@ -537,20 +537,18 @@ int main(int argc, char* argv[])
             }
         }
 
-        // Cria vacas que se movem em curva de Bézier
-        if (cena.asteroids.size() == 5 || cena.asteroids.size() > 15 || g_once) // g_once para testes, cria vaca uma vez
+        // Cria vacas que se movem em curva de Bézier 
+        if (cena.asteroids.size() == 10 && cena.cows.size() == 0) // ajustar
         {
-            float bezierPoints[4] = {1, 1, 1, 1};
-            float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
-            float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
-            glm::vec4 position = glm::vec4(3, 3, 3, 1.0f); // x, y, COW_Z_MAX, 1.0f
-            createCow(&cena, position, bezierPoints, g_VirtualScene["cow"].bbox_max, (float)glfwGetTime());
-            g_once = false;
+            float z = COW_Z_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(COW_Z_MAX-COW_Z_MIN)));
+            createCow(&cena, g_VirtualScene["cow"].bbox_max, (float)glfwGetTime(), z);
         }
 
         for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++)
         {
-            model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z);
+            cow->geometry.position = calculateCowPositionBezier(*cow, (float)glfwGetTime());
+            model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z)
+                  * Matrix_Rotate_Y(M_PI);
             glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
             glUniform1i(object_id_uniform, cow->obj_id);
             DrawVirtualObject("cow");
@@ -592,7 +590,7 @@ int main(int argc, char* argv[])
                 player.state = false;
 
             float distanceOrigin = calculateDistanceBetweenPoints(ORIGIN, laser->geometry.position);
-            if (distanceOrigin > 15.0f) // remove lasers que saíram do mapa
+            if (distanceOrigin > LASER_MAX_RANGE) // remove lasers que saíram do mapa
             {
                 laser->state = false;
                 cena.lasers.erase(laser--);
@@ -632,7 +630,7 @@ int main(int argc, char* argv[])
         TextRendering_ShowFramesPerSecond(window);
 
         // Mostra versão do jogo
-        std::string version = "Versao Pre-Alpha";
+        std::string version = "Versao Alpha";
         TextRendering_ShowGameVersion(window, version);
 
         // Mensagem Game Over

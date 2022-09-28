@@ -20,7 +20,11 @@ out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
 
-#define COW 0 // gouraud
+out vec4 color_v;
+uniform sampler2D cow;
+
+uniform vec4 bbox_min;
+uniform vec4 bbox_max;
 
 void main()
 {
@@ -65,5 +69,47 @@ void main()
 
     // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
     texcoords = texture_coefficients;
-}
 
+    vec4 origin = vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 camera_position = inverse(view) * origin;
+    vec4 n = normalize(normal);
+    vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
+    vec4 v = normalize(camera_position - position_world);
+    vec4 halfVector = normalize(v + l);
+
+    // Espectro da fonte de iluminação
+    vec3 I = vec3(1.0,0.0,1.0); 
+    // Espectro da luz ambiente
+    vec3 Ia = vec3(0.2,0.2,0.2);
+
+    float minx = bbox_min.x;
+    float maxx = bbox_max.x;
+
+    float miny = bbox_min.y;
+    float maxy = bbox_max.y;
+
+    float U = (position_model.x - minx) / (maxx - minx);
+    float V = (position_model.y - miny) / (maxy - miny);
+
+    vec3 Kd0 = texture(cow, vec2(U,V)).rgb;
+    vec3 Ks = vec3(1.0, 0.0, 1.0);
+    vec3 Ka = vec3(0.0, 0.0, 0.0);
+    float q = 100.0;
+
+    // Termo ambiente
+    vec3 ambient_term = Ka*Ia; 
+    // Termo especular utilizando o modelo de iluminação de Blinn-Phong
+    vec3 blinn_phong_specular_term = Ks*I*pow(max(0, dot(n, halfVector)), q); 
+    // Equação de Iluminação
+    float lambert = max(0,dot(n,l));
+    vec3 lambert_diffuse_term = Kd0*I*(lambert+0.1);
+
+    color_v.rgb = lambert_diffuse_term + ambient_term + blinn_phong_specular_term;
+    color_v.a = 1;
+
+    // Equação de Iluminação
+    //float lambert = max(0,dot(n,l));
+
+    //color_v.rgb = Kd0 * (lambert + 0.01);
+    //color_v.a = 1;
+}

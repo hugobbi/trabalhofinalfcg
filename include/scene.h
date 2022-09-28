@@ -22,9 +22,16 @@
 #define ASTEROID_X_MAX 10
 #define ASTEROID_Y_MIN 0
 #define ASTEROID_Y_MAX 10
-
 #define ASTEROID_Z_MAX 10
-#define COW_Z_MAX 10
+
+#define ASTEROID_MAX_NUM 20
+
+#define X_DIST 25
+#define Y_DIST 20
+#define COW_Z_MAX 5
+#define COW_Z_MIN 15
+
+#define LASER_MAX_RANGE 30
 
 struct Sphere
 {
@@ -81,7 +88,7 @@ struct Cow
     bool state;
     float speed;
     float animationTime;
-    float bezierPoints[4];
+    glm::vec4 bezierPoints[4];
 };
 
 struct Scene
@@ -94,4 +101,5 @@ struct Scene
 
 void createLaser(Scene* scene, Player player, float animationTime);
 void createAsteroid(Scene* scene, glm::vec4 position, float animationTime);
-void createCow(Scene* scene, glm::vec4 position, float bezierPoints[4], glm::vec3 cowHWD, float animationTime);
+void createCow(Scene* scene, glm::vec3 cowHWD, float animationTime, float z_rand);
+glm::vec4 calculateCowPositionBezier(Cow cow, float timeNow);

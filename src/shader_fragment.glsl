@@ -16,6 +16,9 @@ in vec2 texcoords;
 // Cor HUD
 in vec4 cor_interpolada_pelo_rasterizador;
 
+// Cor vertex shader (Gouraud)
+in vec4 color_v;
+
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
@@ -79,6 +82,17 @@ void main()
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
 
+    // Blinn-Phong
+    vec4 halfVector = normalize(v + l);
+
+    // Vetor que define o sentido da reflexão especular ideal
+    //vec4 r = -l + 2*n*(dot(n, l)); 
+
+    // Espectro da fonte de iluminação
+    vec3 I = vec3(1.0,1.0,1.0); 
+    // Espectro da luz ambiente
+    vec3 Ia = vec3(0.2,0.2,0.2); 
+
     // Coordenadas de textura U e V
     float U = 0.0;
     float V = 0.0;
@@ -113,7 +127,6 @@ void main()
         U = texcoords.x;
         V = texcoords.y;
     }
-    
     if (object_id == HUD)
     {
         color = vec4(1.0, 1.0, 1.0, 1.0); 
@@ -139,33 +152,45 @@ void main()
     }
     else
     {
-        vec3 Kd0;
-        float lambert;
         if (object_id == EARTH)
         {
-            vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb;
+            vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb; // Refletância difusa
+            vec3 Ks = vec3(0.0, 0.0, 0.0); // Refletância especular
+            vec3 Ka = vec3(0.0, 0.0, 0.0); // Refletância ambiente
+            float q = 1.0; // Expoente especular para o modelo de iluminação de Blinn-Phong
             
-            // Equação de Iluminação
+            // Termo ambiente
+            vec3 ambient_term = Ka*Ia; 
+            // Termo especular utilizando o modelo de iluminação de Blinn-Phong
+            vec3 blinn_phong_specular_term = Ks*I*pow(max(0, dot(n, halfVector)), q); 
+
             float lambert = max(0,dot(n,l));
-            float intensity_night_lights = 100.0;
-
+            float intensity_night_lights = 700.0;
             if (lambert == 0)
-                Kd0 += intensity_night_lights*texture(earth_night, vec2(U,V)).rgb;
-
+                Kd0 += intensity_night_lights*texture(earth_night, vec2(U,V)).rgb; // adiciona luz das cidades
             float instensity_clouds = 5.0;
             Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
-
-            color.rgb = Kd0 * (lambert + 0.01);
+            vec3 lambert_diffuse_term = Kd0*I*(lambert+0.001);
+            
+            color.rgb = lambert_diffuse_term + ambient_term + blinn_phong_specular_term;
             color.a = 1;
         }
         else if (object_id == ASTEROID)
         {
             vec3 Kd0 = texture(asteroid, vec2(U,V)).rgb;
+            vec3 Ks = vec3(0.2, 0.2, 0.2);
+            vec3 Ka = vec3(0.0, 0.0, 0.0);
+            float q = 32.0;
 
+            // Termo ambiente
+            vec3 ambient_term = Ka*Ia; 
+            // Termo especular utilizando o modelo de iluminação de Blinn-Phong
+            vec3 blinn_phong_specular_term = Ks*I*pow(max(0, dot(n, halfVector)), q); 
             // Equação de Iluminação
             float lambert = max(0,dot(n,l));
+            vec3 lambert_diffuse_term = Kd0*I*(lambert+0.01);
 
-            color.rgb = Kd0 * (lambert + 0.01);
+            color.rgb = lambert_diffuse_term + ambient_term + blinn_phong_specular_term;
             color.a = 1;
         }
         else if (object_id == TESTCUBE)
@@ -180,15 +205,9 @@ void main()
         }
         else if (object_id == COW)
         {
-            vec3 Kd0 = texture(cow, vec2(U,V)).rgb;
-
-            // Equação de Iluminação
-            float lambert = max(0,dot(n,l));
-
-            color.rgb = Kd0 * (lambert + 0.01);
-            color.a = 1;
+            color = color_v; // cor calculada no Vertex Shader (Gouraud Shading)
         }
     }
 
     color.rgb = pow(color.rgb, vec3(1.0,1.0,1.0)/2.2);
-} 
+}
