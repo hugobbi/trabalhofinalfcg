@@ -118,7 +118,6 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin);
-glm::vec3 HWD_rectangle(glm::vec3 bbmax, glm::vec3 bbmin);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -176,6 +175,8 @@ bool g_createLaser = true;
 float g_lastTime = 0.0f;
 
 bool g_once = true;
+bool g_pause = false;
+float g_speed = PLAYER_SPEED;
 
 // Variável que controla se o texto informativo será mostrado na tela.
 bool g_ShowInfoText = true;
@@ -324,9 +325,12 @@ int main(int argc, char* argv[])
     // Player
     Player player;
     player.geometry.position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    player.geometry.HWD.x = 0.05f;
-    player.geometry.HWD.y = 0.05f;
-    player.geometry.HWD.z = 0.05f;
+    player.geometry.bboxmax.x = 0.05f;
+    player.geometry.bboxmax.y = 0.05f;
+    player.geometry.bboxmax.z = 0.05f;
+    player.speed = g_speed;
+    player.asteroids_destroyed = 0;
+    player.cows_destroyed = 0;
     player.obj_id = PLAYER;
     player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     player.state = true; // jogador está vivo
@@ -383,14 +387,14 @@ int main(int argc, char* argv[])
             u = u / norm(u);
             v = v / norm(v);
 
-            float speed = 1;
+            player.speed = g_speed;
             glm::vec4 oldPlayerPosition = player.geometry.position;
             switch (g_dir_movement)
             {
                 case 0:
                     if (w_press)
                     {
-                        player.geometry.position += -w * speed * g_deltaT; // W
+                        player.geometry.position += -w * player.speed * g_deltaT; // W
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -400,7 +404,7 @@ int main(int argc, char* argv[])
                 case 1:
                     if (a_press)
                     {
-                        player.geometry.position += -u * speed * g_deltaT; // A
+                        player.geometry.position += -u * player.speed * g_deltaT; // A
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -410,7 +414,7 @@ int main(int argc, char* argv[])
                 case 2:
                     if (s_press)
                     {
-                        player.geometry.position += +w * speed * g_deltaT; // S
+                        player.geometry.position += +w * player.speed * g_deltaT; // S
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -420,7 +424,7 @@ int main(int argc, char* argv[])
                 case 3:
                     if (d_press)
                     {
-                        player.geometry.position += +u * speed * g_deltaT; // D
+                        player.geometry.position += +u * player.speed * g_deltaT; // D
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -430,7 +434,7 @@ int main(int argc, char* argv[])
                 case 4:
                     if (shift_press)
                     {
-                        player.geometry.position += +v * speed * g_deltaT; // SHIFT
+                        player.geometry.position += +v * player.speed * g_deltaT; // SHIFT
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -440,7 +444,7 @@ int main(int argc, char* argv[])
                 case 5:
                     if (ctrl_press)
                     {
-                        player.geometry.position += -v * speed * g_deltaT; // CTRL
+                        player.geometry.position += -v * player.speed * g_deltaT; // CTRL
                         if (playerCollision(&player, cena))
                         {
                             player.geometry.position = oldPlayerPosition;
@@ -496,7 +500,7 @@ int main(int argc, char* argv[])
         glEnable(GL_DEPTH_TEST);
 
         // Desenhamos o modelo da Terra
-        model = Matrix_Translate(0.0f,0.0f,0.0f)
+        model = Matrix_Translate(earth.geometry.position.x, earth.geometry.position.y, earth.geometry.position.z)
               * Matrix_Rotate_Z(0.6f)
               * Matrix_Rotate_X(0.2f)
               * Matrix_Rotate_Y((float)glfwGetTime() * 0.01f);
@@ -504,103 +508,137 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
-        // Atualiza asteroides
-        float currentTime = (float)glfwGetTime();
-        float deltaTime = currentTime - g_lastTime;
-
-        if (deltaTime >= 2 && cena.asteroids.size() < ASTEROID_MAX_NUM)
+        if (!g_pause)
         {
-            float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
-            float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
-            glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
-            createAsteroid(&cena, position, (float)glfwGetTime());   
-            g_lastTime = currentTime;
-        }
-
-        for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) // Desenha cada asteroide da cena
-        {
-            asteroid->geometry.position += glm::normalize(asteroid->direction) * asteroid->speed * (float)(glfwGetTime() - asteroid->animationTime);
-            model = Matrix_Translate(asteroid->geometry.position.x, asteroid->geometry.position.y, asteroid->geometry.position.z)
-                  * Matrix_Rotate_X((float)glfwGetTime() * 0.5f) // rotacao pode ter problema de colisao
-                  * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f)
-                  * Matrix_Rotate_Z((float)glfwGetTime() * 0.3f);
-            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(object_id_uniform, asteroid->obj_id);
-            DrawVirtualObject("asteroid");
-
-            if (rectangleSphereCollision(asteroid->geometry, earth.geometry))
+            // Cria lasers se o botão do mouse for pressionado
+            if (g_LeftMouseButtonPressed && g_createLaser && player.state)
             {
-                asteroid->state = false;
-                cena.asteroids.erase(asteroid--);
-                player.state = false;
-                earth.state = 0;
+                createLaser(&cena, player, (float)glfwGetTime());
+                g_createLaser = false;
             }
-        }
+            else if (!g_LeftMouseButtonPressed)
+                g_createLaser = true;
 
-        // Cria vacas que se movem em curva de Bézier 
-        if (cena.asteroids.size() == 10 && cena.cows.size() == 0) // ajustar
-        {
-            float z = COW_Z_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(COW_Z_MAX-COW_Z_MIN)));
-            createCow(&cena, g_VirtualScene["cow"].bbox_max, (float)glfwGetTime(), z);
-        }
-
-        for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++)
-        {
-            cow->geometry.position = calculateCowPositionBezier(*cow, (float)glfwGetTime());
-            model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z)
-                  * Matrix_Rotate_Y(M_PI);
-            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(object_id_uniform, cow->obj_id);
-            DrawVirtualObject("cow");
-
-            if (rectangleSphereCollision(cow->geometry, earth.geometry)) // se alguma vaca acertar a Terra
+            // Atualiza lasers
+            for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
             {
-                cow->state = false;
-                cena.cows.erase(cow--);
-                player.state = false;
-                earth.state = 0;
+                laser->geometry.position += laser->geometry_collision.direction * laser->speed * (float)(glfwGetTime() - laser->animationTime);
+                if (calculateDistanceBetweenPoints(laser->geometry.position, player.geometry.position) >= LASER_RENDER_THRESHOLD) // renderiza apenas a uma distância para melhorar efeito visual
+                {
+                    model = Matrix_Translate(laser->geometry.position.x, laser->geometry.position.y, laser->geometry.position.z)
+                        * Matrix_Scale(laser->geometry.radius, laser->geometry.radius, laser->geometry.radius);
+                    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                    glUniform1i(object_id_uniform, laser->obj_id);
+                    DrawVirtualObject("sphere");
+                }
+
+                for (auto asteroid = cena.asteroids.begin(); asteroid < cena.asteroids.end(); asteroid++) // laser atinge asteroide
+                {
+                    if (rayRectangleCollision(laser->geometry_collision, asteroid->geometry)) 
+                    {
+                        asteroid->state = false;
+                        cena.asteroids.erase(asteroid--);
+                        player.asteroids_destroyed++;
+                    }
+                }
+                for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++) // laser atinge vaca
+                {
+                    if (rayRectangleCollision(laser->geometry_collision, cow->geometry))
+                    {
+                        cow->state = false;
+                        cena.cows.erase(cow--);
+                    }
+                }
+                if (raySphereCollision(laser->geometry_collision, earth.geometry, player.direction)) // laser acerta Terra
+                {
+                    player.state = false;
+                    if (earth.state == 1)
+                        earth.state = 2;
+                }
+
+                float distanceOrigin = calculateDistanceBetweenPoints(ORIGIN, laser->geometry.position);  // remove lasers que saíram do mapa
+                if (distanceOrigin > LASER_MAX_RANGE)
+                {
+                    laser->state = false;
+                    cena.lasers.erase(laser--);
+                }
             }
 
-            if (rectangleRectangleCollision(cow->geometry, player.geometry)) // se alguma vaca acertar o jogador
+            // Cria asteroides a cada período de tempo e limita quantidade máxima de asteroides
+            float currentTime = (float)glfwGetTime();
+            float deltaTime = currentTime - g_lastTime;
+
+            if (deltaTime >= 1 && cena.asteroids.size() < ASTEROID_MAX_NUM)
             {
-                player.state = false;
+                float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
+                float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
+                glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
+                createAsteroid(&cena, position, g_VirtualScene["asteroid"].bbox_max, g_VirtualScene["asteroid"].bbox_min, (float)glfwGetTime());   
+                g_lastTime = currentTime;
             }
-        }
 
-        // Cria lasers se o botão do mouse for pressionado
-        if (g_LeftMouseButtonPressed && g_createLaser && player.state)
-        {
-            createLaser(&cena, player, (float)glfwGetTime());
-            g_createLaser = false;
-        }
-        else if (!g_LeftMouseButtonPressed)
-            g_createLaser = true;
-
-        for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
-        {
-            laser->geometry.position += glm::normalize(laser->direction) * laser->speed * (float)(glfwGetTime() - laser->animationTime);
-            model = Matrix_Translate(laser->geometry.position.x, laser->geometry.position.y, laser->geometry.position.z)
-                  * Matrix_Scale(laser->geometry.radius, laser->geometry.radius, laser->geometry.radius);
-            glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(object_id_uniform, laser->obj_id);
-            DrawVirtualObject("sphere");
-
-            int collisionTypeLaser = laserCollision(&cena, *laser); 
-            if (collisionTypeLaser == 2)
-                player.state = false;
-
-            float distanceOrigin = calculateDistanceBetweenPoints(ORIGIN, laser->geometry.position);
-            if (distanceOrigin > LASER_MAX_RANGE) // remove lasers que saíram do mapa
+            // Atualiza asteroides
+            for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) 
             {
-                laser->state = false;
-                cena.lasers.erase(laser--);
+                asteroid->geometry.position += asteroid->direction * asteroid->speed * (float)(glfwGetTime() - asteroid->animationTime);
+                model = Matrix_Translate(asteroid->geometry.position.x, asteroid->geometry.position.y, asteroid->geometry.position.z)
+                    * Matrix_Rotate_X((float)glfwGetTime() * 0.5f) 
+                    * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f)
+                    * Matrix_Rotate_Z((float)glfwGetTime() * 0.3f);
+                glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(object_id_uniform, asteroid->obj_id);
+                DrawVirtualObject("asteroid");
+
+                if (rectangleRectangleCollision(asteroid->geometry, player.geometry)) // asteroide atinge jogador
+                {
+                    player.state = false;
+                }
+                if (rectangleSphereCollision(asteroid->geometry, earth.geometry)) // asteroide atinge Terra
+                {
+                    asteroid->state = false;
+                    cena.asteroids.erase(asteroid--);
+                    player.state = false;
+                    if (earth.state == 1)
+                        earth.state = 0;
+                }
+            }
+
+            // Cria vaca a cada certo número de asteroides na cena, e limita quantidade de vacas na cena
+            if (cena.asteroids.size() >= 10 && cena.cows.size() == 0)
+            {
+                float z_rand = COW_Z_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(COW_Z_MAX-COW_Z_MIN))); // aparece em posições aleatórias de z
+                createCow(&cena, g_VirtualScene["cow"].bbox_max, g_VirtualScene["cow"].bbox_min, (float)glfwGetTime(), z_rand);
+            }
+
+            // Atualiza vacas
+            for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++)
+            {
+                cow->geometry.position = calculateCowPositionBezier(*cow, (float)glfwGetTime());
+                model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z)
+                    * Matrix_Rotate_Y(M_PI);
+                glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(object_id_uniform, cow->obj_id);
+                DrawVirtualObject("cow");
+
+                if (rectangleSphereCollision(cow->geometry, earth.geometry)) // vaca atinge Terra
+                {
+                    cow->state = false;
+                    cena.cows.erase(cow--);
+                    player.state = false;
+                    if (earth.state == 1)
+                        earth.state = 0;
+                }
+                if (rectangleRectangleCollision(cow->geometry, player.geometry)) // vaca atinge jogador
+                {
+                    player.state = false;
+                }
             }
         }
 
         // Cubo teste
         /*glDisable(GL_CULL_FACE);
-        model = Matrix_Translate(1.0f,1.0f,0.0f)
-              * Matrix_Scale(0.12f, 0.1f, 0.15f)
+        model = Matrix_Translate(1.5f,1.5f,1.0f)
+              * Matrix_Scale(0.12f, 0.1f, 0.15f);
               * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, TESTCUBE);
@@ -613,7 +651,6 @@ int main(int argc, char* argv[])
             glDisable(GL_CULL_FACE);
             glDisable(GL_DEPTH_TEST);
 
-            //glViewport( 0.0f, 0.0f, g_width, g_height);
             glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
             glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
             glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(Matrix_Identity()));
@@ -660,6 +697,18 @@ int main(int argc, char* argv[])
             TextRendering_PrintString(window, mensagemESC, -(numchars-20)*charwidth, -1.2f*lineheight, 1.0f);
         }
 
+        // Mostra se pausado
+        if (g_pause)
+        {
+            float lineheight = TextRendering_LineHeight(window);
+            float charwidth = TextRendering_CharWidth(window);
+
+            std::string mensagemPause = "Pausado";
+            int numchars = mensagemPause.size();
+
+            TextRendering_PrintString(window, mensagemPause, -1.1f+(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
+        }
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -669,11 +718,6 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
-}
-
-glm::vec3 HWD_rectangle(glm::vec3 bbmax, glm::vec3 bbmin)
-{
-    return glm::vec3(bbmax.x-bbmin.x, bbmax.y-bbmin.y, bbmax.z-bbmin.z);
 }
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin)
@@ -898,7 +942,7 @@ void ComputeNormals(ObjModel* model)
 
 GLuint BuildTrianglesHUD(GLuint object)
 {
-    GLfloat x_aim_ndc_1, y_aim_ndc_1, x_aim_ndc_2, y_aim_ndc_2, aim_size_px = 11;
+    GLfloat x_aim_ndc_1, y_aim_ndc_1, x_aim_ndc_2, y_aim_ndc_2, aim_size_px = 5;
 
     if (object == AIM)
     {
@@ -1416,6 +1460,13 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         LoadShadersFromFiles();
         fprintf(stdout,"Shaders recarregados!\n");
         fflush(stdout);
+    }
+
+    // Se o usuário apertar o jogo troca entre pausado e não
+    if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    {
+        g_pause = !g_pause;
+        g_speed = (g_pause) ? PLAYER_SPEED_PAUSED : PLAYER_SPEED;
     }
 }
 

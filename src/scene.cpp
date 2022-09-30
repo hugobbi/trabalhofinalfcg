@@ -1,10 +1,9 @@
 #include "scene.h"
 
 #define LASER_SPEED 20
-#define LASER_RADIUS 0.2
+#define LASER_RADIUS 0.08 // ajustar
 
-#define ASTEROID_HWD glm::vec3(0.12, 0.1, 0.15)
-#define ASTEROID_SPEED 0.0008
+#define ASTEROID_SPEED 0.001
 
 #define COW_SPEED 0.08
 
@@ -12,8 +11,9 @@ void createLaser(Scene* scene, Player player, float animationTime)
 {
     Laser laser;
     laser.state = true;
-    laser.geometry.position = player.geometry.position+player.direction;
-    laser.direction = player.direction;
+    laser.geometry.position = player.geometry.position;
+    laser.geometry_collision.initialPosition = player.geometry.position;
+    laser.geometry_collision.direction = glm::normalize(player.direction);
     laser.geometry.radius = LASER_RADIUS;
     laser.speed = LASER_SPEED;
     laser.obj_id = LASER;
@@ -21,34 +21,36 @@ void createLaser(Scene* scene, Player player, float animationTime)
     scene->lasers.push_back(laser);
 }
 
-void createAsteroid(Scene* scene, glm::vec4 position, float animationTime)
+void createAsteroid(Scene* scene, glm::vec4 position, glm::vec3 bboxmax, glm::vec3 bboxmin, float animationTime)
 {
     Asteroid asteroid;
-    asteroid.geometry.HWD = ASTEROID_HWD;
     asteroid.geometry.position = position;
-    asteroid.direction = ORIGIN - position;
+    asteroid.direction = glm::normalize(ORIGIN - position);
     asteroid.state = true;
     asteroid.obj_id = ASTEROID;
     asteroid.speed = ASTEROID_SPEED;
     asteroid.animationTime = animationTime;
+    asteroid.geometry.bboxmax = glm::vec4(bboxmax, 1);
+    asteroid.geometry.bboxmin = glm::vec4(bboxmin, 1);
     scene->asteroids.push_back(asteroid);
 }
 
-void createCow(Scene* scene, glm::vec3 cowHWD, float animationTime, float z_rand)
+void createCow(Scene* scene, glm::vec3 bboxmax, glm::vec3 bboxmin, float animationTime, float z_rand)
 {
     Cow cow;
-    cow.geometry.HWD = cowHWD;
+    cow.geometry.bboxmax = glm::vec4(bboxmax, 1);
+    cow.geometry.bboxmin = glm::vec4(bboxmin, 1);
     cow.state = true;
     cow.obj_id = COW;
     cow.speed = COW_SPEED;
     cow.animationTime = animationTime;
 
     // ajustar
-    cow.bezierPoints[0] = glm::vec4(X_DIST,    Y_DIST,     1, 1);
-    cow.bezierPoints[1] = glm::vec4(X_DIST-5, -1.2*Y_DIST, 1, 1);
-    cow.bezierPoints[2] = glm::vec4(X_DIST-15, Y_DIST,     1, 1);
-    cow.bezierPoints[3] = glm::vec4(0,         0,          1, 1);
-    
+    cow.bezierPoints[0] = glm::vec4(X_DIST,    Y_DIST,     z_rand, 1);
+    cow.bezierPoints[1] = glm::vec4(X_DIST-5, -1.2*Y_DIST, z_rand, 1);
+    cow.bezierPoints[2] = glm::vec4(X_DIST-15, Y_DIST,     z_rand, 1);
+    cow.bezierPoints[3] = glm::vec4(0,         0,          1,      1);
+
     scene->cows.push_back(cow);
 }
 

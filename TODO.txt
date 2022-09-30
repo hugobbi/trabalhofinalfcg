@@ -3,7 +3,7 @@
 # ALTA PRIORIDADE
 - blinn phong [x] -> asteroide brihando (fica mais facil de ver)
 - gouraud [x] -> ideia: alguma asteroide especial iluminado com blinn phong
-- bezier [] -> asteroide radioativo (cow.obj) [x]
+- bezier [x] -> asteroide radioativo (cow.obj) [x]
 - modelo asteroides [x]
 - movimento asteroides [x]
 - colisoes [x]
@@ -16,11 +16,14 @@
 # MEDIA PRIORIDADE
 
 - contagem de pontos []
+- contagem de asteroides []
  
 # BAIXA PRIORIDADE
 - melhorar skybox -> distorcao por causa de projeção esferica []
 - melhorar jogabilidade []
 - maneira de vencer o jogo? []
+- menu []
+- música []
 
 Anotações:
 - possivelmente mudar plano de near e far da camera

@@ -7,10 +7,9 @@
 #include "scene.h"
 
 float calculateDistanceBetweenPoints(glm::vec4 point1, glm::vec4 point2);
-void pointSphereCollision(glm::vec4 point, glm::vec4 sphere_center);
 bool sphereSphereCollision(Sphere sphere1, Sphere sphere2);
 bool rectangleSphereCollision(Rectangle rectangle, Sphere sphere);
 bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2);
-bool pointRectangleCollision2D(glm::vec4 point, Rectangle rectangle);
 bool playerCollision(Player* player, Scene scene);
-int laserCollision(Scene* scene, Laser laser);
+bool rayRectangleCollision(Ray ray, Rectangle rectangle);
+bool raySphereCollision(const Ray& ray, const Sphere& sphere, const glm::vec4& playerDirection);
