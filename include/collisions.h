@@ -10,6 +10,6 @@ float calculateDistanceBetweenPoints(glm::vec4 point1, glm::vec4 point2);
 bool sphereSphereCollision(Sphere sphere1, Sphere sphere2);
 bool rectangleSphereCollision(Rectangle rectangle, Sphere sphere);
 bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2);
-bool playerCollision(Player* player, Scene scene);
+bool playerCollision(Player* player, Scene scene, bool gamePaused);
 bool rayRectangleCollision(Ray ray, Rectangle rectangle);
 bool raySphereCollision(const Ray& ray, const Sphere& sphere, const glm::vec4& playerDirection);

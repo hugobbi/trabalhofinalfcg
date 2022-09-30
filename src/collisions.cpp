@@ -149,17 +149,18 @@ bool raySphereCollision(const Ray& ray, const Sphere& sphere, const glm::vec4& p
     return true; 
 }
 
-bool playerCollision(Player* player, Scene scene)
+bool playerCollision(Player* player, Scene scene, bool gamePaused)
 {
     // verifica colisão com asteroides
-    for (Asteroid asteroid : scene.asteroids)
-    {
-       if (rectangleRectangleCollision(asteroid.geometry, player->geometry))
-       {
-            player->state = false; // jogador morreu
-            return true;
-       }
-    }
+    if (!gamePaused)
+        for (Asteroid asteroid : scene.asteroids)
+        {
+            if (rectangleRectangleCollision(asteroid.geometry, player->geometry))
+            {
+                    player->state = false; // jogador morreu
+                    return true;
+            }
+        }
 
     // verifica colisão com Terra
     if (rectangleSphereCollision(player->geometry, scene.earth->geometry))

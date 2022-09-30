@@ -368,8 +368,9 @@ int main(int argc, char* argv[])
         if (player.state)
         {
             // Verifica se jogador foi atingido, apenas se ele estiver vivo
-            for (Asteroid asteroid : cena.asteroids)
-                rectangleRectangleCollision(asteroid.geometry, player.geometry);
+            if (!g_pause)
+                for (Asteroid asteroid : cena.asteroids)
+                    rectangleRectangleCollision(asteroid.geometry, player.geometry);
             
             // Câmera livre
             float vx =  (float)cos(g_CameraPhi)*sin(g_CameraTheta);
@@ -390,71 +391,72 @@ int main(int argc, char* argv[])
 
             player.speed = g_speed;
             glm::vec4 oldPlayerPosition = player.geometry.position;
-            switch (g_dir_movement)
-            {
-                case 0:
-                    if (w_press)
-                    {
-                        player.geometry.position += -w * player.speed * g_deltaT; // W
-                        if (playerCollision(&player, cena))
+            if (!g_pause)
+                switch (g_dir_movement)
+                {
+                    case 0:
+                        if (w_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += -w * player.speed * g_deltaT; // W
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                case 1:
-                    if (a_press)
-                    {
-                        player.geometry.position += -u * player.speed * g_deltaT; // A
-                        if (playerCollision(&player, cena))
+                        break;
+                    case 1:
+                        if (a_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += -u * player.speed * g_deltaT; // A
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                case 2:
-                    if (s_press)
-                    {
-                        player.geometry.position += +w * player.speed * g_deltaT; // S
-                        if (playerCollision(&player, cena))
+                        break;
+                    case 2:
+                        if (s_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += +w * player.speed * g_deltaT; // S
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                case 3:
-                    if (d_press)
-                    {
-                        player.geometry.position += +u * player.speed * g_deltaT; // D
-                        if (playerCollision(&player, cena))
+                        break;
+                    case 3:
+                        if (d_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += +u * player.speed * g_deltaT; // D
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                case 4:
-                    if (shift_press)
-                    {
-                        player.geometry.position += +v * player.speed * g_deltaT; // SHIFT
-                        if (playerCollision(&player, cena))
+                        break;
+                    case 4:
+                        if (shift_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += +v * player.speed * g_deltaT; // SHIFT
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                case 5:
-                    if (ctrl_press)
-                    {
-                        player.geometry.position += -v * player.speed * g_deltaT; // CTRL
-                        if (playerCollision(&player, cena))
+                        break;
+                    case 5:
+                        if (ctrl_press)
                         {
-                            player.geometry.position = oldPlayerPosition;
+                            player.geometry.position += -v * player.speed * g_deltaT; // CTRL
+                            if (playerCollision(&player, cena, g_pause))
+                            {
+                                player.geometry.position = oldPlayerPosition;
+                            }
                         }
-                    }
-                    break;
-                default:
-                    break;
-            }
+                        break;
+                    default:
+                        break;
+                }
             glm::mat4 view = Matrix_Camera_View(player.geometry.position, player_view, world_up);
             glUniformMatrix4fv(view_uniform, 1, GL_FALSE, glm::value_ptr(view));
         }
@@ -634,6 +636,38 @@ int main(int argc, char* argv[])
                 {
                     player.state = false;
                 }
+            }
+        }
+        else
+        {
+            // Desenha modelos, mas eles não se movem (apenas giram)
+            for (Laser laser : cena.lasers)
+            {
+                model = Matrix_Translate(laser.geometry.position.x, laser.geometry.position.y, laser.geometry.position.z)
+                        * Matrix_Scale(laser.geometry.radius, laser.geometry.radius, laser.geometry.radius);
+                    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                    glUniform1i(object_id_uniform, laser.obj_id);
+                    DrawVirtualObject("sphere");
+            }
+
+            for (Asteroid asteroid : cena.asteroids)
+            {
+                model = Matrix_Translate(asteroid.geometry.position.x, asteroid.geometry.position.y, asteroid.geometry.position.z)
+                      * Matrix_Rotate_X((float)glfwGetTime() * 0.5f) 
+                      * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f)
+                      * Matrix_Rotate_Z((float)glfwGetTime() * 0.3f);
+                glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(object_id_uniform, asteroid.obj_id);
+                DrawVirtualObject("asteroid");
+            }
+
+            for (Cow cow : cena.cows)
+            {
+                model = Matrix_Translate(cow.geometry.position.x, cow.geometry.position.y, cow.geometry.position.z)
+                      * Matrix_Rotate_Y(M_PI);
+                glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(object_id_uniform, cow.obj_id);
+                DrawVirtualObject("cow");
             }
         }
 
