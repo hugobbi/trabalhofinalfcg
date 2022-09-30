@@ -118,6 +118,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin);
+void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, bool showCows);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -547,6 +548,7 @@ int main(int argc, char* argv[])
                     {
                         cow->state = false;
                         cena.cows.erase(cow--);
+                        player.cows_destroyed++;
                     }
                 }
                 if (raySphereCollision(laser->geometry_collision, earth.geometry, player.direction)) // laser acerta Terra
@@ -701,13 +703,11 @@ int main(int argc, char* argv[])
         if (g_pause)
         {
             float lineheight = TextRendering_LineHeight(window);
-            float charwidth = TextRendering_CharWidth(window);
-
             std::string mensagemPause = "Pausado";
-            int numchars = mensagemPause.size();
-
-            TextRendering_PrintString(window, mensagemPause, -1.1f+(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
+            TextRendering_PrintString(window, mensagemPause, -1.0f, 1.0f-lineheight, 1.0f);
         }
+
+        mostraContagem(window, player.asteroids_destroyed, player.cows_destroyed, (player.cows_destroyed > 0) ? true : false);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -718,6 +718,18 @@ int main(int argc, char* argv[])
 
     // Fim do programa
     return 0;
+}
+
+void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, bool showCows)
+{
+    float lineheight = TextRendering_LineHeight(window);
+
+    std::string mensagemAsteroide = "Asteroides destruidos: " + std::to_string(numAsteroids);    
+    TextRendering_PrintString(window, mensagemAsteroide, -1.0f+lineheight, -1.0f+lineheight, 1.3f);
+    
+    std::string mensagemVaca = "Vacas destruidas: " + std::to_string(numCows);
+    if (showCows)
+        TextRendering_PrintString(window, mensagemVaca, -1.0f+lineheight, -1.0f+2.2f*lineheight, 1.3f);
 }
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin)

@@ -35,7 +35,7 @@
 #define LASER_RENDER_THRESHOLD 0.5 // ajustar (pra não dar epilepsia)
 
 #define PLAYER_SPEED_PAUSED 1
-#define PLAYER_SPEED 0.1
+#define PLAYER_SPEED 0.5
 
 struct Sphere
 {

@@ -29,6 +29,3 @@ Anotações:
 - possivelmente mudar plano de near e far da camera
 
 == Proximos passos ==
-- colisao laser com asteroide e com terra 
-- movimento laser (direcao da camera)
-- geracao laser (ao clicar mouse)
