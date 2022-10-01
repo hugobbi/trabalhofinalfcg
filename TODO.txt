@@ -17,7 +17,8 @@
 
 - contagem de pontos []
 - contagem de asteroides [x]
-- lugar spawner vaca
+- lugar spawner vaca []
+- munição []
  
 # BAIXA PRIORIDADE
 - melhorar skybox -> distorcao por causa de projeção esferica []
@@ -25,8 +26,3 @@
 - maneira de vencer o jogo? []
 - menu []
 - música []
-
-Anotações:
-- possivelmente mudar plano de near e far da camera
-
-== Proximos passos ==
