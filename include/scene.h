@@ -22,7 +22,7 @@
 #define ASTEROID_X_MAX 10
 #define ASTEROID_Y_MIN 0
 #define ASTEROID_Y_MAX 10
-#define ASTEROID_Z_MAX 7
+#define ASTEROID_Z_MAX 15
 
 #define ASTEROID_MAX_NUM 20
 
@@ -33,9 +33,13 @@
 
 #define LASER_MAX_RANGE 30
 #define LASER_RENDER_THRESHOLD 0.5 // ajustar (pra não dar epilepsia)
+#define LASER_RADIUS 0.08 
 
 #define PLAYER_SPEED_PAUSED 1
 #define PLAYER_SPEED 0.5
+#define COW_SPEED 0.05
+#define LASER_SPEED 200
+#define ASTEROID_SPEED 1
 
 struct Sphere
 {
@@ -72,6 +76,7 @@ struct Player
     int cows_destroyed;
     int asteroids_destroyed;
     float speed;
+    std::vector<int> numLasers;
 };
 
 struct Laser
@@ -80,7 +85,6 @@ struct Laser
     Ray geometry_collision;
     int obj_id;
     float speed;
-    float animationTime;
     bool state;
 };
 
@@ -91,7 +95,6 @@ struct Asteroid
     int obj_id;
     bool state;
     float speed;
-    float animationTime;
 };
 
 struct Cow
@@ -100,7 +103,7 @@ struct Cow
     int obj_id;
     bool state;
     float speed;
-    float animationTime;
+    float t;
     glm::vec4 bezierPoints[4];
 };
 
@@ -112,7 +115,7 @@ struct Scene
     Earth* earth;
 };
 
-void createLaser(Scene* scene, Player player, float animationTime);
-void createAsteroid(Scene* scene, glm::vec4 position, glm::vec3 bboxmax, glm::vec3 bboxmin, float animationTime);
-void createCow(Scene* scene, glm::vec3 bboxmax, glm::vec3 bboxmin, float animationTime, float z_rand);
-glm::vec4 calculateCowPositionBezier(Cow cow, float timeNow);
+void createLaser(Scene* scene, Player player);
+void createAsteroid(Scene* scene, glm::vec4 position, glm::vec3 bboxmax, glm::vec3 bboxmin);
+void createCow(Scene* scene, glm::vec3 bboxmax, glm::vec3 bboxmin, float z_rand);
+glm::vec4 calculateCowPositionBezier(Cow cow);

@@ -16,7 +16,8 @@
 # MEDIA PRIORIDADE
 
 - contagem de pontos []
-- contagem de asteroides []
+- contagem de asteroides [x]
+- lugar spawner vaca
  
 # BAIXA PRIORIDADE
 - melhorar skybox -> distorcao por causa de projeção esferica []

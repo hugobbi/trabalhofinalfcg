@@ -42,8 +42,8 @@
 #include "collisions.h"
 #include "scene.h"
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 1920 //1280
+#define SCREEN_HEIGHT 1080 //720
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -516,7 +516,7 @@ int main(int argc, char* argv[])
             // Cria lasers se o botão do mouse for pressionado
             if (g_LeftMouseButtonPressed && g_createLaser && player.state)
             {
-                createLaser(&cena, player, (float)glfwGetTime());
+                createLaser(&cena, player);
                 g_createLaser = false;
             }
             else if (!g_LeftMouseButtonPressed)
@@ -525,7 +525,7 @@ int main(int argc, char* argv[])
             // Atualiza lasers
             for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
             {
-                laser->geometry.position += laser->geometry_collision.direction * laser->speed * (float)(glfwGetTime() - laser->animationTime);
+                laser->geometry.position += laser->geometry_collision.direction * laser->speed * g_deltaT;
                 if (calculateDistanceBetweenPoints(laser->geometry.position, player.geometry.position) >= LASER_RENDER_THRESHOLD) // renderiza apenas a uma distância para melhorar efeito visual
                 {
                     model = Matrix_Translate(laser->geometry.position.x, laser->geometry.position.y, laser->geometry.position.z)
@@ -577,14 +577,14 @@ int main(int argc, char* argv[])
                 float x = ASTEROID_X_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_X_MAX-ASTEROID_X_MIN)));
                 float y = ASTEROID_Y_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(ASTEROID_Y_MAX-ASTEROID_Y_MIN)));
                 glm::vec4 position = glm::vec4(x, y, ASTEROID_Z_MAX, 1.0f);
-                createAsteroid(&cena, position, g_VirtualScene["asteroid"].bbox_max, g_VirtualScene["asteroid"].bbox_min, (float)glfwGetTime());   
+                createAsteroid(&cena, position, g_VirtualScene["asteroid"].bbox_max, g_VirtualScene["asteroid"].bbox_min);   
                 g_lastTime = currentTime;
             }
 
             // Atualiza asteroides
             for (auto asteroid = cena.asteroids.begin(); asteroid != cena.asteroids.end(); asteroid++) 
             {
-                asteroid->geometry.position += asteroid->direction * asteroid->speed * (float)(glfwGetTime() - asteroid->animationTime);
+                asteroid->geometry.position += asteroid->direction * asteroid->speed * g_deltaT;
                 model = Matrix_Translate(asteroid->geometry.position.x, asteroid->geometry.position.y, asteroid->geometry.position.z)
                     * Matrix_Rotate_X((float)glfwGetTime() * 0.5f) 
                     * Matrix_Rotate_Y((float)glfwGetTime() * 0.2f)
@@ -596,6 +596,8 @@ int main(int argc, char* argv[])
                 if (rectangleRectangleCollision(asteroid->geometry, player.geometry)) // asteroide atinge jogador
                 {
                     player.state = false;
+                    if (earth.state == 1)
+                        earth.state = 3;
                 }
                 if (rectangleSphereCollision(asteroid->geometry, earth.geometry)) // asteroide atinge Terra
                 {
@@ -611,13 +613,14 @@ int main(int argc, char* argv[])
             if (cena.asteroids.size() >= 10 && cena.cows.size() == 0)
             {
                 float z_rand = COW_Z_MIN + static_cast<float>(rand()) /(static_cast<float>(RAND_MAX/(COW_Z_MAX-COW_Z_MIN))); // aparece em posições aleatórias de z
-                createCow(&cena, g_VirtualScene["cow"].bbox_max, g_VirtualScene["cow"].bbox_min, (float)glfwGetTime(), z_rand);
+                createCow(&cena, g_VirtualScene["cow"].bbox_max, g_VirtualScene["cow"].bbox_min, z_rand);
             }
 
             // Atualiza vacas
             for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++)
             {
-                cow->geometry.position = calculateCowPositionBezier(*cow, (float)glfwGetTime());
+                cow->t += COW_SPEED * g_deltaT;
+                cow->geometry.position = calculateCowPositionBezier(*cow);
                 model = Matrix_Translate(cow->geometry.position.x, cow->geometry.position.y, cow->geometry.position.z)
                     * Matrix_Rotate_Y(M_PI);
                 glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
@@ -645,9 +648,9 @@ int main(int argc, char* argv[])
             {
                 model = Matrix_Translate(laser.geometry.position.x, laser.geometry.position.y, laser.geometry.position.z)
                         * Matrix_Scale(laser.geometry.radius, laser.geometry.radius, laser.geometry.radius);
-                    glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-                    glUniform1i(object_id_uniform, laser.obj_id);
-                    DrawVirtualObject("sphere");
+                glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+                glUniform1i(object_id_uniform, laser.obj_id);
+                DrawVirtualObject("sphere");
             }
 
             for (Asteroid asteroid : cena.asteroids)
@@ -722,8 +725,10 @@ int main(int argc, char* argv[])
             {
                 mensagemMorte = "A Terra foi destruida :(";
             }
-            else
+            else if (earth.state == 3)
+            {
                 mensagemMorte = "E morreu :(";
+            }
 
             int numchars = mensagemMorte.size();
             TextRendering_PrintString(window, mensagemMorte, -(numchars+1)*charwidth, 0.0f, 2.0f);
@@ -1512,7 +1517,15 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         g_pause = !g_pause;
-        g_speed = (g_pause) ? PLAYER_SPEED_PAUSED : PLAYER_SPEED;
+
+        if (g_pause)
+        {
+            g_speed = PLAYER_SPEED_PAUSED;
+        }
+        else
+        {
+            g_speed = PLAYER_SPEED;
+        }
     }
 }
 
