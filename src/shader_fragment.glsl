@@ -155,14 +155,6 @@ void main()
         if (object_id == EARTH)
         {
             vec3 Kd0 = texture(earth_day, vec2(U,V)).rgb; // Refletância difusa
-            vec3 Ks = vec3(0.0, 0.0, 0.0); // Refletância especular
-            vec3 Ka = vec3(0.0, 0.0, 0.0); // Refletância ambiente
-            float q = 1.0; // Expoente especular para o modelo de iluminação de Blinn-Phong
-            
-            // Termo ambiente
-            vec3 ambient_term = Ka*Ia; 
-            // Termo especular utilizando o modelo de iluminação de Blinn-Phong
-            vec3 blinn_phong_specular_term = Ks*I*pow(max(0, dot(n, halfVector)), q); 
 
             float lambert = max(0,dot(n,l));
             float intensity_night_lights = 700.0;
@@ -172,7 +164,7 @@ void main()
             Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
             vec3 lambert_diffuse_term = Kd0*I*(lambert+0.001);
             
-            color.rgb = lambert_diffuse_term + ambient_term + blinn_phong_specular_term;
+            color.rgb = lambert_diffuse_term;
             color.a = 1;
         }
         else if (object_id == ASTEROID)
