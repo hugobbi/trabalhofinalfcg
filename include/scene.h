@@ -15,6 +15,7 @@
 #define PLAYER 7
 #define LASER 8
 #define COW 9
+#define DEATHSTAR 10
 
 #define ORIGIN glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
 
@@ -76,6 +77,7 @@ struct Player
     int cows_destroyed;
     int asteroids_destroyed;
     float speed;
+    int ammo; 
     std::vector<int> numLasers;
 };
 
@@ -107,12 +109,20 @@ struct Cow
     glm::vec4 bezierPoints[4];
 };
 
+struct Fulgor 
+{
+    Rectangle geometry;
+    int obj_id;
+};
+
+
 struct Scene
 {
     std::vector<Asteroid> asteroids;
     std::vector<Laser> lasers;
     std::vector<Cow> cows;
     Earth* earth;
+    Fulgor* fulgor;
 };
 
 void createLaser(Scene* scene, Player player);
