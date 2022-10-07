@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
     
     // Player
     Player player;
-    player.geometry.position = glm::vec4(3.0f, 2.0f, -1.0f, 1.0f);
+    player.geometry.position = glm::vec4(-1.3f, 0.8f, 0.7f, 1.0f);
     player.geometry.bboxmax.x = 0.05f;
     player.geometry.bboxmax.y = 0.05f;
     player.geometry.bboxmax.z = 0.05f;
@@ -340,7 +340,6 @@ int main(int argc, char* argv[])
     player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
     player.ammo = 8;
     player.state = true; // jogador está vivo
-
 
 
     // Inicializamos o código para renderização de texto.
@@ -486,7 +485,7 @@ int main(int argc, char* argv[])
         glm::mat4 model = Matrix_Identity();
         glm::mat4 projection;
         float nearplane = -0.01f;  // Posição do "near plane" -0.1
-        float farplane  = -20.0f; // Posição do "far plane" -10
+        float farplane  = -25.0f; // Posição do "far plane" -10
         float field_of_view = M_PI / 3.0f;
         projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
         glUniformMatrix4fv(projection_uniform, 1, GL_FALSE, glm::value_ptr(projection));
@@ -518,8 +517,7 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
-
-        // Desenhamos o modelo da Terra 2 
+        // Desenhamos o modelo do planeta de vacas 1
         model = Matrix_Translate(-10.0f , 4.0f, 10.0f)
               * Matrix_Scale(2.5f, 2.5f, 2.5f)
              * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
@@ -527,17 +525,17 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, DEATHSTAR);
         DrawVirtualObject("sphere");
 
+        // Desenhamos o modelo do planeta de vacas 2
         model = Matrix_Translate(10.0f , -4.0f, 10.0f)
               * Matrix_Scale(1.5f, 2.5f, 2.5f)
-             * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
+              * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, DEATHSTAR);
         DrawVirtualObject("sphere");
 
-        model = 
-               Matrix_Translate(1.0f , 1.0f, 1.0f)
+        model = Matrix_Translate(1.0f , 1.0f, 1.0f)
                * Matrix_Scale(0.1f, 0.1f, 0.1f)
-              * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
+               * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
         glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(object_id_uniform, COW);
         DrawVirtualObject("cow");
@@ -545,14 +543,17 @@ int main(int argc, char* argv[])
         if (!g_pause)
         {
             // Cria lasers se o botão do mouse for pressionado
-            if (g_LeftMouseButtonPressed && g_createLaser && player.state)
-            {
-                createLaser(&cena, player);
-                player.ammo --;
-                g_createLaser = false;
-            }
-            else if (!g_LeftMouseButtonPressed)
-                g_createLaser = true;
+           if (player.ammo > 0)
+           {
+                if (g_LeftMouseButtonPressed && g_createLaser && player.state)
+                {
+                    createLaser(&cena, player);
+                    player.ammo--;
+                    g_createLaser = false;
+                }
+                else if (!g_LeftMouseButtonPressed)
+                    g_createLaser = true;
+           }
 
             // Atualiza lasers
             for (auto laser = cena.lasers.begin(); laser != cena.lasers.end(); laser++) // renderiza cada laser da cena
@@ -574,6 +575,7 @@ int main(int argc, char* argv[])
                         asteroid->state = false;
                         cena.asteroids.erase(asteroid--);
                         player.asteroids_destroyed++;
+                        player.ammo += 5;
                     }
                 }
                 for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++) // laser atinge vaca
@@ -583,7 +585,6 @@ int main(int argc, char* argv[])
                         cow->state = false;
                         cena.cows.erase(cow--);
                         player.cows_destroyed++;
-                        player.ammo += 10;
                     }
                 }
                 if (raySphereCollision(laser->geometry_collision, earth.geometry, player.direction)) // laser acerta Terra
@@ -706,16 +707,6 @@ int main(int argc, char* argv[])
                 DrawVirtualObject("cow");
             }
         }
-
-        // Cubo teste
-        /*glDisable(GL_CULL_FACE);
-        model = Matrix_Translate(1.5f,1.5f,1.0f)
-              * Matrix_Scale(0.12f, 0.1f, 0.15f);
-              * Matrix_Rotate_X((float)glfwGetTime() * 0.5f);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, TESTCUBE);
-        DrawVirtualObject("cube");
-        glEnable(GL_CULL_FACE);*/
 
         // HUD (SEMPRE POR ÚLTIMO)
         if (player.state) // só é mostrado se o jogador estiver vivo
@@ -1451,8 +1442,11 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 	double y_rot_camera = sensitivity * (ypos - (g_height/2)) / g_height;
 
     // Atualizamos parâmetros da câmera com os deslocamentos
-    g_CameraTheta -= sensitivity*x_rot_camera;
-    g_CameraPhi   += sensitivity*y_rot_camera;
+    if (!g_pause)
+    {
+        g_CameraTheta -= sensitivity*x_rot_camera;
+        g_CameraPhi   += sensitivity*y_rot_camera;
+    }
 
     // Em coordenadas esféricas, o ângulo phi deve ficar entre -pi/2 e +pi/2.
     float phimax = 3.141592f/2;

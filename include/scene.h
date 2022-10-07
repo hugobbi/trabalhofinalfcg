@@ -33,7 +33,7 @@
 #define COW_Z_MIN 0
 
 #define LASER_MAX_RANGE 30
-#define LASER_RENDER_THRESHOLD 0.5 // ajustar (pra não dar epilepsia)
+#define LASER_RENDER_THRESHOLD 0.5
 #define LASER_RADIUS 0.08 
 
 #define PLAYER_SPEED_PAUSED 1
@@ -77,8 +77,7 @@ struct Player
     int cows_destroyed;
     int asteroids_destroyed;
     float speed;
-    int ammo; 
-    std::vector<int> numLasers;
+    int ammo;
 };
 
 struct Laser
