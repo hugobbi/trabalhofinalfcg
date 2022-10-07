@@ -35,6 +35,9 @@ uniform mat4 projection;
 #define PLAYER 7
 #define LASER 8
 #define COW 9
+#define DEATHSTAR 10
+#define SUN 11 
+
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -50,6 +53,9 @@ uniform sampler2D skybox;
 
 uniform sampler2D asteroid;
 uniform sampler2D cow;
+
+uniform sampler2D cow_star;
+
 
 // O valor de saída ("out") de um Fragment Shader é a cor final do fragmento.
 out vec4 color;
@@ -97,7 +103,7 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
-    if ( object_id == EARTH || object_id == ASTEROID)
+    if ( object_id == EARTH || object_id == ASTEROID || object_id == DEATHSTAR )
     {
         vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
         
@@ -167,6 +173,20 @@ void main()
             color.rgb = lambert_diffuse_term;
             color.a = 1;
         }
+        else if (object_id == DEATHSTAR)
+        {
+            vec3 Kd0 = texture(cow_star, vec2(U,V)).rgb; // Refletância difusa
+
+            float lambert = max(0,dot(n,l));
+            float intensity_night_lights = 700.0;
+            float instensity_clouds = 5.0;
+            //Kd0 += instensity_clouds*texture(earth_clouds, vec2(U,V)).rgb; // adiciona nuvens
+            vec3 lambert_diffuse_term = Kd0*I*(lambert+0.001);
+            
+            color.rgb = lambert_diffuse_term;
+            color.a = 0.1f;
+        }
+        
         else if (object_id == ASTEROID)
         {
             vec3 Kd0 = texture(asteroid, vec2(U,V)).rgb;

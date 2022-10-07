@@ -118,7 +118,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin);
-void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, bool showCows);
+void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, int ammo);
 
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
@@ -177,6 +177,7 @@ float g_lastTime = 0.0f;
 
 bool g_once = true;
 bool g_pause = false;
+bool g_pause_pkey = false;
 float g_speed = PLAYER_SPEED;
 
 // Variável que controla se o texto informativo será mostrado na tela.
@@ -278,6 +279,8 @@ int main(int argc, char* argv[])
     LoadTextureImage("../../data/asteroids/2k_haumea_fictional.jpg"); // asteroid texture
     LoadTextureImage("../../data/cow/aguaviva.jpg"); // cow texture
 
+    LoadTextureImage("../../data/death_star/cow_star.jpg"); // cow star texture
+
     // CARREGANDO OBJETOS
     // Construímos a representação de objetos geométricos através de malhas de triângulos
 
@@ -312,6 +315,7 @@ int main(int argc, char* argv[])
     ComputeNormals(&cowmodel);
     BuildTrianglesAndAddToVirtualScene(&cowmodel);
 
+
     // Inicializa cena
     Scene cena; 
 
@@ -325,7 +329,7 @@ int main(int argc, char* argv[])
     
     // Player
     Player player;
-    player.geometry.position = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    player.geometry.position = glm::vec4(3.0f, 2.0f, -1.0f, 1.0f);
     player.geometry.bboxmax.x = 0.05f;
     player.geometry.bboxmax.y = 0.05f;
     player.geometry.bboxmax.z = 0.05f;
@@ -334,7 +338,10 @@ int main(int argc, char* argv[])
     player.cows_destroyed = 0;
     player.obj_id = PLAYER;
     player.direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    player.ammo = 8;
     player.state = true; // jogador está vivo
+
+
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -391,7 +398,7 @@ int main(int argc, char* argv[])
 
             player.speed = g_speed;
             glm::vec4 oldPlayerPosition = player.geometry.position;
-            if (!g_pause)
+            if (!g_pause_pkey)
                 switch (g_dir_movement)
                 {
                     case 0:
@@ -511,12 +518,37 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
+
+        // Desenhamos o modelo da Terra 2 
+        model = Matrix_Translate(-10.0f , 4.0f, 10.0f)
+              * Matrix_Scale(2.5f, 2.5f, 2.5f)
+             * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, DEATHSTAR);
+        DrawVirtualObject("sphere");
+
+        model = Matrix_Translate(10.0f , -4.0f, 10.0f)
+              * Matrix_Scale(1.5f, 2.5f, 2.5f)
+             * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, DEATHSTAR);
+        DrawVirtualObject("sphere");
+
+        model = 
+               Matrix_Translate(1.0f , 1.0f, 1.0f)
+               * Matrix_Scale(0.1f, 0.1f, 0.1f)
+              * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
+        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(object_id_uniform, COW);
+        DrawVirtualObject("cow");
+
         if (!g_pause)
         {
             // Cria lasers se o botão do mouse for pressionado
             if (g_LeftMouseButtonPressed && g_createLaser && player.state)
             {
                 createLaser(&cena, player);
+                player.ammo --;
                 g_createLaser = false;
             }
             else if (!g_LeftMouseButtonPressed)
@@ -551,6 +583,7 @@ int main(int argc, char* argv[])
                         cow->state = false;
                         cena.cows.erase(cow--);
                         player.cows_destroyed++;
+                        player.ammo += 10;
                     }
                 }
                 if (raySphereCollision(laser->geometry_collision, earth.geometry, player.direction)) // laser acerta Terra
@@ -746,7 +779,7 @@ int main(int argc, char* argv[])
             TextRendering_PrintString(window, mensagemPause, -1.0f, 1.0f-lineheight, 1.0f);
         }
 
-        mostraContagem(window, player.asteroids_destroyed, player.cows_destroyed, (player.cows_destroyed > 0) ? true : false);
+        mostraContagem(window, player.asteroids_destroyed, player.cows_destroyed, player.ammo);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -759,16 +792,18 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, bool showCows)
+void mostraContagem(GLFWwindow* window, int numAsteroids, int numCows, int ammo)
 {
     float lineheight = TextRendering_LineHeight(window);
 
     std::string mensagemAsteroide = "Asteroides destruidos: " + std::to_string(numAsteroids);    
     TextRendering_PrintString(window, mensagemAsteroide, -1.0f+lineheight, -1.0f+lineheight, 1.3f);
     
-    std::string mensagemVaca = "Vacas destruidas: " + std::to_string(numCows);
-    if (showCows)
-        TextRendering_PrintString(window, mensagemVaca, -1.0f+lineheight, -1.0f+2.2f*lineheight, 1.3f);
+    std::string mensagemAmmo = "Municao : " + std::to_string(ammo);
+    TextRendering_PrintString(window, mensagemAmmo, -1.0f+lineheight, -1.0f+3.2f*lineheight, 1.3f);
+
+    std::string mensagemVaca= "Vacas destruidas: " + std::to_string(numCows);
+    TextRendering_PrintString(window, mensagemVaca, -1.0f+lineheight, -1.0f+2.2f*lineheight, 1.3f);
 }
 
 void printAABB(glm::vec3 bbmax, glm::vec3 bbmin)
@@ -904,6 +939,8 @@ void LoadShadersFromFiles()
 
     glUniform1i(glGetUniformLocation(program_id, "asteroid"), 4); // asteroid
     glUniform1i(glGetUniformLocation(program_id, "cow"), 5); // cow
+
+     glUniform1i(glGetUniformLocation(program_id, "cow_star"), 6); // cow_star
 
     glUseProgram(0);
 }
@@ -1517,6 +1554,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         g_pause = !g_pause;
+        g_pause_pkey = !g_pause_pkey;
 
         if (g_pause)
         {
@@ -1526,6 +1564,12 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         {
             g_speed = PLAYER_SPEED;
         }
+        
+    }
+    
+    if (key == GLFW_KEY_L && action == GLFW_PRESS)
+    {
+         g_pause = !g_pause;
     }
 }
 
