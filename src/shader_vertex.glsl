@@ -82,6 +82,7 @@ void main()
     // Espectro da luz ambiente
     vec3 Ia = vec3(0.2,0.2,0.2);
 
+    // utiliza modelo planar de mapeamento de texturas para a vaca
     float minx = bbox_min.x;
     float maxx = bbox_max.x;
 

@@ -1,5 +1,6 @@
 #include "scene.h"
 
+// Cria lasers
 void createLaser(Scene* scene, Player player)
 {
     Laser laser;
@@ -13,6 +14,7 @@ void createLaser(Scene* scene, Player player)
     scene->lasers.push_back(laser);
 }
 
+// Gerador de asteroides
 void createAsteroid(Scene* scene, glm::vec4 position, glm::vec3 bboxmax, glm::vec3 bboxmin)
 {
     Asteroid asteroid;
@@ -26,6 +28,7 @@ void createAsteroid(Scene* scene, glm::vec4 position, glm::vec3 bboxmax, glm::ve
     scene->asteroids.push_back(asteroid);
 }
 
+// Gerador de vacas
 void createCow(Scene* scene, glm::vec3 bboxmax, glm::vec3 bboxmin, float z_rand)
 {
     Cow cow;
@@ -45,10 +48,9 @@ void createCow(Scene* scene, glm::vec3 bboxmax, glm::vec3 bboxmin, float z_rand)
     scene->cows.push_back(cow);
 }
 
+// calcula pontos da curva de Bézier cúbica
 glm::vec4 calculateCowPositionBezier(Cow cow)
 {
-    //cow.t = (sin(cow.t) + 1)/2;
-
     glm::vec4 c12 = cow.bezierPoints[0] + cow.t*(cow.bezierPoints[1] - cow.bezierPoints[0]);
     glm::vec4 c23 = cow.bezierPoints[1] + cow.t*(cow.bezierPoints[2] - cow.bezierPoints[1]);
     glm::vec4 c34 = cow.bezierPoints[2] + cow.t*(cow.bezierPoints[3] - cow.bezierPoints[2]);

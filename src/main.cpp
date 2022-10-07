@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
 
             player.speed = g_speed;
             glm::vec4 oldPlayerPosition = player.geometry.position;
-            if (!g_pause_pkey)
+            if (!g_pause)
                 switch (g_dir_movement)
                 {
                     case 0:
@@ -517,29 +517,6 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, earth.obj_id);
         DrawVirtualObject("sphere");
 
-        // Desenhamos o modelo do planeta de vacas 1
-        model = Matrix_Translate(-10.0f , 4.0f, 10.0f)
-              * Matrix_Scale(2.5f, 2.5f, 2.5f)
-             * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, DEATHSTAR);
-        DrawVirtualObject("sphere");
-
-        // Desenhamos o modelo do planeta de vacas 2
-        model = Matrix_Translate(10.0f , -4.0f, 10.0f)
-              * Matrix_Scale(1.5f, 2.5f, 2.5f)
-              * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, DEATHSTAR);
-        DrawVirtualObject("sphere");
-
-        model = Matrix_Translate(1.0f , 1.0f, 1.0f)
-               * Matrix_Scale(0.1f, 0.1f, 0.1f)
-               * Matrix_Rotate_Y((float)glfwGetTime() * 0.3f);
-        glUniformMatrix4fv(model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-        glUniform1i(object_id_uniform, COW);
-        DrawVirtualObject("cow");
-
         if (!g_pause)
         {
             // Cria lasers se o botão do mouse for pressionado
@@ -575,7 +552,7 @@ int main(int argc, char* argv[])
                         asteroid->state = false;
                         cena.asteroids.erase(asteroid--);
                         player.asteroids_destroyed++;
-                        player.ammo += 5;
+                        player.ammo += 2;
                     }
                 }
                 for (auto cow = cena.cows.begin(); cow != cena.cows.end(); cow++) // laser atinge vaca
@@ -1548,7 +1525,7 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
         g_pause = !g_pause;
-        g_pause_pkey = !g_pause_pkey;
+        //g_pause_pkey = !g_pause_pkey; apenas para apresentação do jogo
 
         if (g_pause)
         {
@@ -1561,10 +1538,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
         
     }
     
-    if (key == GLFW_KEY_L && action == GLFW_PRESS)
+    /*if (key == GLFW_KEY_L && action == GLFW_PRESS) apenas para apresentação do jogo
     {
          g_pause = !g_pause;
-    }
+    }*/
 }
 
 // Definimos o callback para impressão de erros da GLFW no terminal

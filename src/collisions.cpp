@@ -13,6 +13,7 @@ float calculateDistanceBetweenPoints(glm::vec4 point1, glm::vec4 point2)
               + pow(point2.z - point1.z, 2));
 }
 
+// detecta colisão entre duas esferas, não foi utilizado na versão final
 bool sphereSphereCollision(Sphere sphere1, Sphere sphere2)
 {
     float distance_between_centers = calculateDistanceBetweenPoints(sphere1.position, sphere2.position);
@@ -50,6 +51,7 @@ bool rectangleSphereCollision(Rectangle rectangle, Sphere sphere)
     return false;
 }
 
+// detecta colisão entre dois retângulos 3D
 bool rectangleRectangleCollision(Rectangle rectangle1, Rectangle rectangle2)
 {
     float xDistance = fabs(rectangle1.position.x - rectangle2.position.x);
@@ -119,6 +121,7 @@ bool rayRectangleCollision(Ray ray, Rectangle rectangle)
     return true;
 }
 
+// intersecção raio esfera usando discriminante
 bool raySphereCollision(const Ray& ray, const Sphere& sphere, const glm::vec4& playerDirection)
 {
     glm::vec4 dirRaySphere = normalize(ray.initialPosition - sphere.position);
@@ -149,6 +152,7 @@ bool raySphereCollision(const Ray& ray, const Sphere& sphere, const glm::vec4& p
     return true; 
 }
 
+// controla colisões do jogador
 bool playerCollision(Player* player, Scene scene, bool gamePaused)
 {
     // verifica colisão com asteroides
